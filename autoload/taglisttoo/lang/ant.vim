@@ -35,32 +35,14 @@
 "   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 " }}}
 
-" Format(types, tags) {{{
-function! taglisttoo#lang#python#Format(types, tags)
-  let formatter = taglisttoo#util#Formatter(a:tags)
-  call formatter.filename()
-
-  let functions = filter(copy(a:tags), 'v:val.type == "f"')
-  if len(functions)
-    call formatter.blank()
-    call formatter.format(a:types['f'], functions, '')
-  endif
-
-  let classes = filter(copy(a:tags), 'v:val.type == "c"')
-  if g:Tlist_Sort_Type == 'name'
-    call sort(classes, 'taglisttoo#util#SortTags')
-  endif
-
-  for class in classes
-    call formatter.blank()
-    call formatter.heading(a:types['c'], class, '')
-
-    let members = filter(copy(a:tags),
-        \ 'v:val.type == "m" && v:val.parent == "class:" . class.name')
-    call formatter.format(a:types['m'], members, "\t")
-  endfor
-
-  return formatter
+" Parse(file, settings) {{{
+function! taglisttoo#lang#ant#Parse(file, settings)
+  return taglisttoo#util#Parse(a:file, [
+      \ ['p', "<project\\s+(?:[^>]*)name\\s*=\\s*['\"](.*?)['\"]", 1],
+      \ ['i', "<import\\s+(?:[^>]*)file\\s*=\\s*['\"](.*?)['\"]", 1],
+      \ ['t', "<target\\s+(?:[^>]*)name\\s*=\\s*['\"](.*?)['\"]", 1],
+      \ ['r', "<property\\s+(?:[^>]*)name\\s*=\\s*['\"](.*?)['\"]", 1],
+    \ ])
 endfunction " }}}
 
 " vim:ft=vim:fdm=marker

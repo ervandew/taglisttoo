@@ -1,46 +1,56 @@
 " Author:  Eric Van Dewoestine
 "
-" Description: {{{
-"   see http://eclim.org/vim/taglist.html
+" License: {{{
+"   Copyright (c) 2005 - 2010, Eric Van Dewoestine
+"   All rights reserved.
 "
-" License:
+"   Redistribution and use of this software in source and binary forms, with
+"   or without modification, are permitted provided that the following
+"   conditions are met:
 "
-" Copyright (C) 2005 - 2010  Eric Van Dewoestine
+"   * Redistributions of source code must retain the above
+"     copyright notice, this list of conditions and the
+"     following disclaimer.
 "
-" This program is free software: you can redistribute it and/or modify
-" it under the terms of the GNU General Public License as published by
-" the Free Software Foundation, either version 3 of the License, or
-" (at your option) any later version.
+"   * Redistributions in binary form must reproduce the above
+"     copyright notice, this list of conditions and the
+"     following disclaimer in the documentation and/or other
+"     materials provided with the distribution.
 "
-" This program is distributed in the hope that it will be useful,
-" but WITHOUT ANY WARRANTY; without even the implied warranty of
-" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-" GNU General Public License for more details.
+"   * Neither the name of Eric Van Dewoestine nor the names of its
+"     contributors may be used to endorse or promote products derived from
+"     this software without specific prior written permission of
+"     Eric Van Dewoestine.
 "
-" You should have received a copy of the GNU General Public License
-" along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"
+"   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+"   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+"   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+"   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+"   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+"   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+"   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+"   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+"   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+"   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+"   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 " }}}
 
-" FormatJavascript(types, tags) {{{
-function! eclim#taglist#lang#javascript#FormatJavascript(types, tags)
+" Format(types, tags) {{{
+function! taglisttoo#lang#javascript#Format(types, tags)
   let pos = getpos('.')
 
-  let lines = []
-  let content = []
-
-  call add(content, expand('%:t'))
-  call add(lines, -1)
+  let formatter = taglisttoo#util#Formatter(a:tags)
+  call formatter.filename()
 
   let object_contents = []
 
-  let objects = filter(copy(a:tags), 'v:val[3] == "o"')
-  let members = filter(copy(a:tags), 'v:val[3] == "m"')
+  let objects = filter(copy(a:tags), 'v:val.type == "o"')
+  let members = filter(copy(a:tags), 'v:val.type == "m"')
   let functions = filter(copy(a:tags),
-    \ 'v:val[3] == "f" && v:val[2] =~ "\\<function\\>"')
+    \ 'v:val.type == "f" && v:val.pattern =~ "\\<function\\>"')
   let object_bounds = {}
   for object in objects
-    exec 'let object_start = ' . split(object[4], ':')[1]
+    let object_start = object.line
     call cursor(object_start, 1)
     while search('{', 'W') && s:SkipComments()
       " no op
@@ -52,7 +62,7 @@ function! eclim#taglist#lang#javascript#FormatJavascript(types, tags)
     let index = 0
     for fct in members
       if len(fct) > 3
-        exec 'let fct_line = ' . split(fct[4], ':')[1]
+        let fct_line = fct.line
         if fct_line > object_start && fct_line < object_end
           call add(methods, fct)
         elseif fct_line > object_end
@@ -72,7 +82,7 @@ function! eclim#taglist#lang#javascript#FormatJavascript(types, tags)
     let index = 0
     for fct in functions
       if len(fct) > 3
-        exec 'let fct_line = ' . split(fct[4], ':')[1]
+        let fct_line = fct.line
         if fct_line > object_start && fct_line < object_end
           call add(methods, fct)
           call add(indexes, index)
@@ -102,10 +112,8 @@ function! eclim#taglist#lang#javascript#FormatJavascript(types, tags)
   endfor
 
   if len(functions) > 0
-    call add(content, "")
-    call add(lines, -1)
-    call eclim#taglist#util#FormatType(
-        \ a:tags, a:types['f'], functions, lines, content, "\t")
+    call formatter.blank()
+    call formatter.format(a:types['f'], functions, '')
   endif
 
   if g:Tlist_Sort_Type == 'name'
@@ -113,31 +121,57 @@ function! eclim#taglist#lang#javascript#FormatJavascript(types, tags)
   endif
 
   for object_content in object_contents
-    call add(content, "")
-    call add(lines, -1)
-    call add(content, "\t" . a:types['o'] . ' ' . object_content.object[0])
-    call add(lines, index(a:tags, object_content.object))
-
-    call eclim#taglist#util#FormatType(
-        \ a:tags, a:types['f'], object_content.methods, lines, content, "\t\t")
+    call formatter.blank()
+    call formatter.heading(a:types['o'], object_content.object, '')
+    call formatter.format(a:types['f'], object_content.methods, "\t")
   endfor
 
   call setpos('.', pos)
 
-  return [lines, content]
+  return formatter
+endfunction " }}}
+
+" Parse(file, settings) {{{
+function! taglisttoo#lang#javascript#Parse(file, settings)
+  let patterns = []
+  " Match Objects/Classes
+  call add(patterns, ['o', '([A-Za-z0-9_.]+)\s*=\s*\{(\s*[^}]|$)', 1])
+
+  " prototype.js has Object.extend to extend existing objects.
+  call add(patterns, ['o', '(?:var\s+)?\b([A-Z][A-Za-z0-9_.]+)\s*=\s*Object\.extend\s*\(', 1])
+  call add(patterns, ['o', '\bObject\.extend\s*\(\b([A-Z][A-Za-z0-9_.]+)\s*,\s*\{', 1])
+
+  " mootools uses 'new Class'
+  call add(patterns, ['o', '(?:var\s+)?\b([A-Z][A-Za-z0-9_.]+)\s*=\s*new\s+Class\s*\(', 1])
+
+  " firebug uses extend
+  call add(patterns, ['o', '(?:var\s+)?\b([A-Z][A-Za-z0-9_.]+)\s*=\s*extend\s*\(', 1])
+
+  " vimperator uses function MyClass ()
+  call add(patterns, ['o', 'function\s+\b([A-Z][A-Za-z0-9_.]+)\s*\(', 1])
+  " vimperator uses var = (function()
+  call add(patterns, ['o', '([A-Za-z0-9_.]+)\s*=\s*\(function\s*\(', 1])
+
+  " Match Functions
+  call add(patterns, ['f', '\bfunction\s+([a-zA-Z0-9_.\$]+?)\s*\(', 1])
+  call add(patterns, ['f', '([a-zA-Z0-9_.\$]+?)\s*=\s*function\s*\(', 1])
+
+  " Match Members
+  call add(patterns, ['m', '\b([a-zA-Z0-9_.\$]+?)\s*:\s*function\s*\(', 1])
+  return taglisttoo#util#Parse(a:file, patterns)
 endfunction " }}}
 
 " s:ObjectComparator(o1, o2) {{{
 function s:ObjectComparator(o1, o2)
-  let n1 = a:o1['object'][0]
-  let n2 = a:o2['object'][0]
+  let n1 = a:o1['object'].name
+  let n2 = a:o2['object'].name
   return n1 == n2 ? 0 : n1 > n2 ? 1 : -1
 endfunction " }}}
 
 " s:SkipComments() {{{
 function s:SkipComments()
   let synname = synIDattr(synID(line('.'), col('.'), 1), "name")
-  return synname =~ '\([Cc]omment\|[Ss]tring\)'
+  return synname =~? '\(comment\|string\)'
 endfunction " }}}
 
 " s:GetParentObject(objects, bounds, start, end) {{{

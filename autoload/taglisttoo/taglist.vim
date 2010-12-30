@@ -1,52 +1,70 @@
 " Author:  Eric Van Dewoestine
 "
-" Description: {{{
-"   see http://eclim.org/vim/taglist.html
+" License: {{{
+"   Copyright (c) 2005 - 2010, Eric Van Dewoestine
+"   All rights reserved.
 "
-" License:
+"   Redistribution and use of this software in source and binary forms, with
+"   or without modification, are permitted provided that the following
+"   conditions are met:
 "
-" Copyright (C) 2005 - 2010  Eric Van Dewoestine
+"   * Redistributions of source code must retain the above
+"     copyright notice, this list of conditions and the
+"     following disclaimer.
 "
-" This program is free software: you can redistribute it and/or modify
-" it under the terms of the GNU General Public License as published by
-" the Free Software Foundation, either version 3 of the License, or
-" (at your option) any later version.
+"   * Redistributions in binary form must reproduce the above
+"     copyright notice, this list of conditions and the
+"     following disclaimer in the documentation and/or other
+"     materials provided with the distribution.
 "
-" This program is distributed in the hope that it will be useful,
-" but WITHOUT ANY WARRANTY; without even the implied warranty of
-" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-" GNU General Public License for more details.
+"   * Neither the name of Eric Van Dewoestine nor the names of its
+"     contributors may be used to endorse or promote products derived from
+"     this software without specific prior written permission of
+"     Eric Van Dewoestine.
 "
-" You should have received a copy of the GNU General Public License
-" along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"
+"   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+"   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+"   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+"   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+"   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+"   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+"   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+"   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+"   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+"   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+"   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 " }}}
 
 " Global Variables {{{
 let g:TagListToo = 1
-
-" Tag listing sort type - 'name' or 'order'
-if !exists('Tlist_Sort_Type')
-  let Tlist_Sort_Type = 'order'
-endif
-
-if !exists('g:EclimTaglistEcho')
-  let g:EclimTaglistEcho = 1
-endif
-
 " }}}
 
 " Script Variables {{{
-  let s:taglisttoo_ignore = g:TagList_title . '\|ProjectTree'
+  let s:python_path = expand("<sfile>:h:h")
 
   " used to prefer one window over another if a buffer is open in more than
   " one window.
   let s:taglisttoo_prevwinnr = 0
+
+  let s:taglisttoo_title = g:TagList_title
+  let s:taglisttoo_title_escaped =
+    \ substitute(s:taglisttoo_title, '\(.\{-}\)\[\(.\{-}\)\]\(.\{-}\)', '\1[[]\2[]]\3', 'g')
 " }}}
 
 " Language Settings {{{
+let s:tlist_ant_settings = {
+    \ 'lang': 'ant',
+    \ 'parse': 'taglisttoo#lang#ant#Parse',
+    \ 'tags': {
+      \ 'p': 'project',
+      \ 'i': 'import',
+      \ 'r': 'property',
+      \ 't': 'target'
+    \ }
+  \ }
+
 " assembly language
-let s:tlist_def_asm_settings = {
+let s:tlist_asm_settings = {
     \ 'lang': 'asm', 'tags': {
       \ 'd': 'define',
       \ 'l': 'label',
@@ -56,7 +74,7 @@ let s:tlist_def_asm_settings = {
   \ }
 
 " aspperl language
-let s:tlist_def_aspperl_settings = {
+let s:tlist_aspperl_settings = {
     \ 'lang': 'asp', 'tags': {
       \ 'f': 'function',
       \ 's': 'sub',
@@ -65,7 +83,7 @@ let s:tlist_def_aspperl_settings = {
   \ }
 
 " aspvbs language
-let s:tlist_def_aspvbs_settings = {
+let s:tlist_aspvbs_settings = {
     \ 'lang': 'asp', 'tags': {
       \ 'f': 'function',
       \ 's': 'sub',
@@ -74,10 +92,10 @@ let s:tlist_def_aspvbs_settings = {
   \ }
 
 " awk language
-let s:tlist_def_awk_settings = {'lang': 'awk', 'tags': {'f': 'function'}}
+let s:tlist_awk_settings = {'lang': 'awk', 'tags': {'f': 'function'}}
 
 " beta language
-let s:tlist_def_beta_settings = {
+let s:tlist_beta_settings = {
     \ 'lang': 'beta', 'tags': {
       \ 'f': 'fragment',
       \ 's': 'slot',
@@ -86,7 +104,7 @@ let s:tlist_def_beta_settings = {
   \ }
 
 " c language
-let s:tlist_def_c_settings = {
+let s:tlist_c_settings = {
     \ 'lang': 'c', 'tags': {
       \ 'd': 'macro',
       \ 'g': 'enum',
@@ -99,7 +117,7 @@ let s:tlist_def_c_settings = {
   \ }
 
 " c++ language
-let s:tlist_def_cpp_settings = {
+let s:tlist_cpp_settings = {
     \ 'lang': 'c++', 'tags': {
       \ 'n': 'namespace',
       \ 'v': 'variable',
@@ -113,21 +131,8 @@ let s:tlist_def_cpp_settings = {
     \ }
   \ }
 
-" cdt cproject files
-let s:tlist_format_eclipse_cproject = 'eclim#taglist#lang#cproject#FormatCProject'
-let s:tlist_def_eclipse_cproject_settings = {
-    \ 'lang': 'cproject', 'tags': {
-      \ 'c': 'configuration',
-      \ 'e': 'entry',
-      \ 't': 'toolchain',
-      \ 'l': 'tool',
-      \ 'i': 'include',
-      \ 's': 'symbol',
-    \ }
-  \ }
-
 " c# language
-let s:tlist_def_cs_settings = {
+let s:tlist_cs_settings = {
     \ 'lang': 'c#', 'tags': {
       \ 'd': 'macro',
       \ 't': 'typedef',
@@ -143,7 +148,7 @@ let s:tlist_def_cs_settings = {
   \ }
 
 " cobol language
-let s:tlist_def_cobol_settings = {
+let s:tlist_cobol_settings = {
     \ 'lang': 'cobol', 'tags': {
       \ 'd': 'data',
       \ 'f': 'file',
@@ -154,8 +159,14 @@ let s:tlist_def_cobol_settings = {
     \ }
   \ }
 
+let s:tlist_dtd_settings = {
+    \ 'lang': 'dtd',
+    \ 'parse': 'taglisttoo#lang#dtd#Parse',
+    \ 'tags': {'e': 'element'}
+  \ }
+
 " eiffel language
-let s:tlist_def_eiffel_settings = {
+let s:tlist_eiffel_settings = {
     \ 'lang': 'eiffel', 'tags': {
       \ 'c': 'class',
       \ 'f': 'feature'
@@ -163,7 +174,7 @@ let s:tlist_def_eiffel_settings = {
   \ }
 
 " erlang language
-let s:tlist_def_erlang_settings = {
+let s:tlist_erlang_settings = {
     \ 'lang': 'erlang', 'tags': {
       \ 'd': 'macro',
       \ 'r': 'record',
@@ -173,7 +184,7 @@ let s:tlist_def_erlang_settings = {
   \ }
 
 " expect (same as tcl) language
-let s:tlist_def_expect_settings = {
+let s:tlist_expect_settings = {
     \ 'lang': 'tcl', 'tags': {
       \ 'c': 'class',
       \ 'f': 'method',
@@ -182,7 +193,7 @@ let s:tlist_def_expect_settings = {
   \ }
 
 " fortran language
-let s:tlist_def_fortran_settings = {
+let s:tlist_fortran_settings = {
     \ 'lang': 'fortran', 'tags': {
       \ 'p': 'program',
       \ 'b': 'block data',
@@ -200,18 +211,35 @@ let s:tlist_def_fortran_settings = {
     \ }
   \ }
 
-" HTML language
-let s:tlist_def_html_settings = {
-    \ 'lang': 'html', 'tags': {
+let s:tlist_html_settings = {
+    \ 'lang': 'html',
+    \ 'parse': 'taglisttoo#lang#html#Parse',
+    \ 'tags': {'a': 'anchor', 'i': 'id', 'f': 'function'}
+  \ }
+
+let s:tlist_htmldjango_settings = {
+    \ 'lang': 'htmldjango',
+    \ 'parse': 'taglisttoo#lang#htmldjango#Parse',
+    \ 'tags': {'a': 'anchor', 'i': 'id', 'f': 'function', 'b': 'block'}
+  \ }
+
+let s:tlist_htmljinja_settings = {
+    \ 'lang': 'htmljinja',
+    \ 'parse': 'taglisttoo#lang#htmljinja#Parse',
+    \ 'tags': {
       \ 'a': 'anchor',
-      \ 'f': 'javascript function'
+      \ 'i': 'id',
+      \ 'f': 'function',
+      \ 'm': 'macro',
+      \ 'b': 'block'
     \ }
   \ }
 
 " java language
-let s:tlist_format_java = 'eclim#taglist#lang#java#FormatJava'
-let s:tlist_def_java_settings = {
-    \ 'lang': 'java', 'tags': {
+let s:tlist_java_settings = {
+    \ 'lang': 'java',
+    \ 'format': 'taglisttoo#lang#java#Format',
+    \ 'tags': {
       \ 'p': 'package',
       \ 'c': 'class',
       \ 'i': 'interface',
@@ -220,26 +248,45 @@ let s:tlist_def_java_settings = {
     \ }
   \ }
 
-let s:tlist_format_javascript = 'eclim#taglist#lang#javascript#FormatJavascript'
-let s:tlist_def_javascript_settings = {
-    \ 'lang': 'javascript', 'tags': {
+let s:tlist_javascript_settings = {
+    \ 'lang': 'javascript',
+    \ 'format': 'taglisttoo#lang#javascript#Format',
+    \ 'parse': 'taglisttoo#lang#javascript#Parse',
+    \ 'tags': {
       \ 'o': 'object',
       \ 'm': 'member',
       \ 'f': 'function',
     \ }
   \ }
 
+let s:tlist_jproperties_settings = {
+    \ 'lang': 'jproperties',
+    \ 'parse': 'taglisttoo#lang#jproperties#Parse',
+    \ 'tags': {'p': 'property'}
+  \ }
+
 " lisp language
-let s:tlist_def_lisp_settings = {'lang': 'lisp', 'tags': {'f': 'function'}}
+let s:tlist_lisp_settings = {'lang': 'lisp', 'tags': {'f': 'function'}}
+
+let s:tlist_log4j_settings = {
+    \ 'lang': 'log4j',
+    \ 'parse': 'taglisttoo#lang#log4j#Parse',
+    \ 'tags': {
+      \ 'a': 'appender',
+      \ 'c': 'category',
+      \ 'l': 'logger',
+      \ 'r': 'root',
+    \ }
+  \ }
 
 " lua language
-let s:tlist_def_lua_settings = {'lang': 'lua', 'tags': {'f': 'function'}}
+let s:tlist_lua_settings = {'lang': 'lua', 'tags': {'f': 'function'}}
 
 " makefiles
-let s:tlist_def_make_settings = {'lang': 'make', 'tags': {'m': 'macro'}}
+let s:tlist_make_settings = {'lang': 'make', 'tags': {'m': 'macro'}}
 
 " pascal language
-let s:tlist_def_pascal_settings = {
+let s:tlist_pascal_settings = {
     \ 'lang': 'pascal', 'tags': {
       \ 'f': 'function',
       \ 'p': 'procedure'
@@ -247,7 +294,7 @@ let s:tlist_def_pascal_settings = {
   \ }
 
 " perl language
-let s:tlist_def_perl_settings = {
+let s:tlist_perl_settings = {
     \ 'lang': 'perl', 'tags': {
       \ 'c': 'constant',
       \ 'l': 'label',
@@ -257,9 +304,11 @@ let s:tlist_def_perl_settings = {
   \ }
 
 " php language
-let s:tlist_format_php = 'eclim#taglist#lang#php#FormatPhp'
-let s:tlist_def_php_settings = {
-    \ 'lang': 'php', 'tags': {
+let s:tlist_php_settings = {
+    \ 'lang': 'php',
+    \ 'format': 'taglisttoo#lang#php#Format',
+    \ 'parse': 'taglisttoo#lang#php#Parse',
+    \ 'tags': {
       \ 'c': 'class',
       \ 'd': 'constant',
       \ 'v': 'variable',
@@ -268,9 +317,10 @@ let s:tlist_def_php_settings = {
   \ }
 
 " python language
-let s:tlist_format_python = 'eclim#taglist#lang#python#FormatPython'
-let s:tlist_def_python_settings = {
-    \ 'lang': 'python', 'tags': {
+let s:tlist_python_settings = {
+    \ 'lang': 'python',
+    \ 'format': 'taglisttoo#lang#python#Format',
+    \ 'tags': {
       \ 'c': 'class',
       \ 'm': 'member',
       \ 'f': 'function'
@@ -278,10 +328,16 @@ let s:tlist_def_python_settings = {
   \ }
 
 " rexx language
-let s:tlist_def_rexx_settings = {'lang': 'rexx', 'tags': {'s': 'subroutine'}}
+let s:tlist_rexx_settings = {'lang': 'rexx', 'tags': {'s': 'subroutine'}}
+
+let s:tlist_rst_settings = {
+    \ 'lang': 'rst',
+    \ 'parse': 'taglisttoo#lang#rst#Parse',
+    \ 'tags': {'s': 'section', 'a': 'anchor'}
+  \ }
 
 " ruby language
-let s:tlist_def_ruby_settings = {
+let s:tlist_ruby_settings = {
     \ 'lang': 'ruby', 'tags': {
       \ 'c': 'class',
       \ 'f': 'method',
@@ -291,7 +347,7 @@ let s:tlist_def_ruby_settings = {
   \ }
 
 " scheme language
-let s:tlist_def_scheme_settings = {
+let s:tlist_scheme_settings = {
     \ 'lang': 'scheme', 'tags': {
       \ 's': 'set',
       \ 'f': 'function'
@@ -299,16 +355,16 @@ let s:tlist_def_scheme_settings = {
   \ }
 
 " shell language
-let s:tlist_def_sh_settings = {'lang': 'sh', 'tags': {'f': 'function'}}
+let s:tlist_sh_settings = {'lang': 'sh', 'tags': {'f': 'function'}}
 
 " C shell language
-let s:tlist_def_csh_settings = {'lang': 'sh', 'tags': {'f': 'function'}}
+let s:tlist_csh_settings = {'lang': 'sh', 'tags': {'f': 'function'}}
 
 " Z shell language
-let s:tlist_def_zsh_settings = {'lang': 'sh', 'tags': {'f': 'function'}}
+let s:tlist_zsh_settings = {'lang': 'sh', 'tags': {'f': 'function'}}
 
 " slang language
-let s:tlist_def_slang_settings = {
+let s:tlist_slang_settings = {
     \ 'lang': 'slang', 'tags': {
       \ 'n': 'namespace',
       \ 'f': 'function'
@@ -316,7 +372,7 @@ let s:tlist_def_slang_settings = {
   \ }
 
 " sml language
-let s:tlist_def_sml_settings = {
+let s:tlist_sml_settings = {
     \ 'lang': 'sml', 'tags': {
       \ 'e': 'exception',
       \ 'c': 'functor',
@@ -328,24 +384,28 @@ let s:tlist_def_sml_settings = {
     \ }
   \ }
 
-" sql language
-let s:tlist_def_sql_settings = {
-    \ 'lang': 'sql', 'tags': {
-      \ 'c': 'cursor',
-      \ 'F': 'field',
-      \ 'P': 'package',
-      \ 'r': 'record',
-      \ 's': 'subtype',
+let s:tlist_sql_settings = {
+    \ 'lang': 'sql',
+    \ 'parse': 'taglisttoo#lang#sql#Parse',
+    \ 'tags': {
+      \ 'g': 'group / role',
+      \ 'r': 'role',
+      \ 'u': 'user',
+      \ 'm': 'user',
+      \ 'p': 'tablespace',
+      \ 'z': 'tablespace',
+      \ 's': 'schema',
       \ 't': 'table',
-      \ 'T': 'trigger',
-      \ 'v': 'variable',
+      \ 'v': 'view',
+      \ 'q': 'sequence',
+      \ 'x': 'trigger',
       \ 'f': 'function',
-      \ 'p': 'procedure'
+      \ 'c': 'procedure'
     \ }
   \ }
 
 " tcl language
-let s:tlist_def_tcl_settings = {
+let s:tlist_tcl_settings = {
     \ 'lang': 'tcl', 'tags': {
       \ 'c': 'class',
       \ 'f': 'method',
@@ -355,7 +415,7 @@ let s:tlist_def_tcl_settings = {
   \ }
 
 " vera language
-let s:tlist_def_vera_settings = {
+let s:tlist_vera_settings = {
     \ 'lang': 'vera', 'tags': {
       \ 'c': 'class',
       \ 'd': 'macro',
@@ -373,7 +433,7 @@ let s:tlist_def_vera_settings = {
   \ }
 
 "verilog language
-let s:tlist_def_verilog_settings = {
+let s:tlist_verilog_settings = {
     \ 'lang': 'verilog', 'tags': {
       \ 'm': 'module',
       \ 'c': 'constant',
@@ -389,7 +449,7 @@ let s:tlist_def_verilog_settings = {
   \ }
 
 " vim language
-let s:tlist_def_vim_settings = {
+let s:tlist_vim_settings = {
     \ 'lang': 'vim', 'tags': {
       \ 'a': 'autocmds',
       \ 'v': 'variable',
@@ -397,12 +457,18 @@ let s:tlist_def_vim_settings = {
     \ }
   \ }
 
+let s:tlist_xsd_settings = {
+    \ 'lang': 'xsd',
+    \ 'parse': 'taglisttoo#lang#xsd#Parse',
+    \ 'tags': {'e': 'elements', 't': 'types'}
+  \ }
+
 " yacc language
-let s:tlist_def_yacc_settings = {'lang': 'yacc', 'tags': {'l': 'label'}}
+let s:tlist_yacc_settings = {'lang': 'yacc', 'tags': {'l': 'label'}}
 " }}}
 
 " AutoOpen() {{{
-function! eclim#taglist#taglisttoo#AutoOpen()
+function! taglisttoo#taglist#AutoOpen()
   let open_window = 0
 
   let i = 1
@@ -419,7 +485,7 @@ function! eclim#taglist#taglisttoo#AutoOpen()
   endwhile
 
   if open_window
-    call eclim#taglist#taglisttoo#Taglist()
+    call taglisttoo#taglist#Taglist()
   endif
 endfunction " }}}
 
@@ -428,13 +494,15 @@ endfunction " }}}
 "   - not supplied (or -1): toggle
 "   - 1: open
 "   - 0: close
-function! eclim#taglist#taglisttoo#Taglist(...)
+function! taglisttoo#taglist#Taglist(...)
   if !exists('g:Tlist_Ctags_Cmd')
-    call eclim#util#EchoError('Unable to find a version of ctags installed.')
+    call s:EchoError('Unable to find a version of ctags installed.')
     return
   endif
 
-  if bufname('%') == g:TagList_title
+  call s:Init()
+
+  if bufname('%') == s:taglisttoo_title
     call s:CloseTaglist()
     return
   endif
@@ -442,7 +510,7 @@ function! eclim#taglist#taglisttoo#Taglist(...)
   let action = len(a:000) ? a:000[0] : -1
 
   if action == -1 || action == 0
-    let winnum = bufwinnr(g:TagList_title)
+    let winnum = bufwinnr(s:taglisttoo_title_escaped)
     if winnum != -1
       let prevbuf = bufnr('%')
       exe winnum . 'wincmd w'
@@ -458,7 +526,8 @@ function! eclim#taglist#taglisttoo#Taglist(...)
 
     augroup taglisttoo
       autocmd!
-      autocmd BufUnload __Tag_List__ call s:Cleanup()
+      exec 'autocmd BufUnload ' .
+        \ escape(s:taglisttoo_title_escaped, ' ') . ' call s:Cleanup()'
       autocmd CursorHold * call s:ShowCurrentTag()
     augroup END
   endif
@@ -466,7 +535,7 @@ endfunction " }}}
 
 " Restore() {{{
 " Restore the taglist, typically after loading from a session file.
-function! eclim#taglist#taglisttoo#Restore()
+function! taglisttoo#taglist#Restore()
   if exists('t:taglistoo_restoring')
     return
   endif
@@ -477,26 +546,39 @@ function! eclim#taglist#taglisttoo#Restore()
     autocmd!
   augroup END
 
-  call eclim#util#DelayedCommand(
-    \ 'let winnum = bufwinnr(g:TagList_title) | ' .
-    \ 'if winnum != -1 | ' .
-    \ '  exec "TlistToo" | ' .
-    \ '  exec "TlistToo" | ' .
-    \ '  unlet t:taglistoo_restoring | ' .
-    \ 'endif')
+  let winnum = bufwinnr(s:taglisttoo_title_escaped)
+  if winnum != -1
+    TlistToo
+    TlistToo
+    unlet t:taglistoo_restoring
+  endif
+endfunction " }}}
+
+" s:Init() {{{
+function! s:Init()
+python << PYTHONEOF
+import sys, vim
+path = vim.eval('s:python_path')
+if path not in sys.path:
+  sys.path.append(path)
+  import taglisttoo
+PYTHONEOF
 endfunction " }}}
 
 " s:StartAutocmds() {{{
 function! s:StartAutocmds()
   augroup taglisttoo_file
     autocmd!
-    autocmd CursorHold,CursorMoved __Tag_List__ call s:EchoTag()
+    exec 'autocmd CursorHold,CursorMoved ' .
+      \ escape(s:taglisttoo_title_escaped, ' ') . ' call s:EchoTag()'
+    exec 'autocmd BufEnter ' .
+      \ escape(s:taglisttoo_title_escaped, ' ') . '  nested call s:CloseIfLastWindow()'
     autocmd BufEnter *
-      \ if bufwinnr(g:TagList_title) != -1 |
+      \ if bufwinnr(s:taglisttoo_title_escaped) != -1 |
       \   call s:ProcessTags(0) |
       \ endif
     autocmd BufWritePost *
-      \ if bufwinnr(g:TagList_title) != -1 |
+      \ if bufwinnr(s:taglisttoo_title_escaped) != -1 |
       \   call s:ProcessTags(1) |
       \ endif
     " bit of a hack to re-process tags if the filetype changes after the tags
@@ -504,16 +586,16 @@ function! s:StartAutocmds()
     autocmd FileType *
       \ if exists('b:ft') |
       \   if b:ft != &ft |
-      \     if bufwinnr(g:TagList_title) != -1 |
+      \     if bufwinnr(s:taglisttoo_title_escaped) != -1 |
       \       call s:ProcessTags(1) |
       \     endif |
+      \     let b:ft = &ft |
       \   endif |
       \ else |
       \   let b:ft = &ft |
       \ endif
     autocmd WinLeave *
-      \ if bufwinnr(g:TagList_title) != -1 &&
-      \     expand('%') !~ s:taglisttoo_ignore |
+      \ if bufwinnr(s:taglisttoo_title_escaped) != -1 && &buftype == '' |
       \   let s:taglisttoo_prevwinnr = winnr() |
       \ endif
   augroup END
@@ -554,7 +636,7 @@ function! s:ProcessTags(on_open_or_write)
   " if we are entering a buffer whose taglist list is already loaded, then
   " don't do anything.
   if !a:on_open_or_write
-    let bufnr = bufnr(g:TagList_title)
+    let bufnr = bufnr(s:taglisttoo_title_escaped)
     let filebuf = getbufvar(bufnr, 'taglisttoo_file_bufnr')
     if filebuf == bufnr('%')
       return
@@ -562,7 +644,7 @@ function! s:ProcessTags(on_open_or_write)
   endif
 
   let filename = expand('%:p')
-  if filename =~ s:taglisttoo_ignore || filename == ''
+  if filename == '' || &buftype != ''
     return
   endif
   let filewin = winnr()
@@ -584,10 +666,8 @@ function! s:ProcessTags(on_open_or_write)
       else
         let settings = g:tlist_{&ft}_settings
       endif
-      let types = join(keys(settings.tags), '')
     else
-      let settings = s:tlist_def_{&ft}_settings
-      let types = join(keys(settings.tags), '')
+      let settings = s:tlist_{&ft}_settings
     endif
 
     let file = substitute(expand('%:p'), '\', '/', 'g')
@@ -604,30 +684,10 @@ function! s:ProcessTags(on_open_or_write)
     endif
 
     try
-      let command = g:Tlist_Ctags_Cmd_Ctags
-      if eclim#EclimAvailable() && !exists('g:EclimDisabled')
-        let port = eclim#client#nailgun#GetNgPort()
-        let command = substitute(g:Tlist_Ctags_Cmd_Eclim, '<port>', port, '')
-      endif
-
-      if has('win32unix')
-        let file = eclim#cygwin#WindowsPath(file)
-      endif
-
-      let command .= ' -f - --format=2 --excmd=pattern ' .
-          \ '--fields=nks --sort=no --language-force=<lang> ' .
-          \ '--<lang>-types=<types> "<file>"'
-      let command = substitute(command, '<lang>', settings.lang, 'g')
-      let command = substitute(command, '<types>', types, 'g')
-      let command = substitute(command, '<file>', file, '')
-
-      if has('win32') || has('win64') || has('win32unix')
-        let command .= ' "'
-      endif
-
-      let response = eclim#util#System(command)
-      if has('win32unix')
-        let response = substitute(response, "\<c-m>\n", '\n', 'g')
+      if has_key(settings, 'parse')
+        let results = function(settings.parse)(file, settings)
+      else
+        let results = s:Parse(file, settings)
       endif
     finally
       if tempfile != ''
@@ -635,71 +695,26 @@ function! s:ProcessTags(on_open_or_write)
       endif
     endtry
 
-    if v:shell_error
-      call eclim#util#EchoError('taglist failed with error code: ' . v:shell_error)
+    if type(results) != 3
       return
     endif
 
-    let results = split(response, '\n')
-    if len(response) == 1 && response[0] == '0'
-      return
-    endif
-
-    while len(results) && results[0] =~ 'ctags.*: Warning:'
-      call remove(results, 0)
-    endwhile
-
-    let truncated = 0
     if len(results)
-      " for some reason, vim may truncate the output of system, leading to only
-      " a partial taglist.
-      let values = s:ParseOutputLine(results[-1])
-      if len(values) < 5
-        let truncated = 1
-      endif
-
       for result in results
-        let values = s:ParseOutputLine(result)
-
-        " filter false positives found in comments.
-        if values[-1] =~ 'line:[0-9]\+'
-          exec 'let lnum = ' . substitute(values[-1], 'line:\([0-9]\+\).*', '\1', '')
-          let line = getline(lnum)
-          let col = len(line) - len(substitute(line, '^\s*', '', '')) + 1
-          if synIDattr(synID(lnum, col, 1), "name") =~ '\([Cc]omment\|[Ss]tring\)'
-            continue
-          endif
+        " filter false positives found in comments or strings
+        let lnum = result.line
+        let line = getline(lnum)
+        let col = len(line) - len(substitute(line, '^\s*', '', '')) + 1
+        if synIDattr(synID(lnum, col, 1), 'name') =~? '\(comment\|string\)' ||
+         \ synIDattr(synIDtrans(synID(lnum, col, 1)), 'name') =~? '\(comment\|string\)'
+          continue
         endif
 
-        " exit if we run into apparent bug in vim that truncates the response
-        " from system()
-        if len(values) < 5
-          break
-        endif
-
-        call add(tags, values)
+        call add(tags, result)
       endfor
     endif
 
-    if exists('s:tlist_format_{&ft}')
-      exec 'call s:Window(settings.tags, tags, ' .
-        \ s:tlist_format_{&ft} . '(settings.tags, tags))'
-    else
-      if g:Tlist_Sort_Type == 'name'
-        call sort(tags)
-      endif
-
-      call s:Window(settings.tags, tags, s:FormatDefault(settings.tags, tags))
-    endif
-
-    " if vim truncated the output, then add a note in the taglist indicating
-    " the the list has been truncated.
-    if truncated
-      setlocal modifiable
-      call append(line('$'), '')
-      call append(line('$'), 'Warning: taglist truncated.')
-      setlocal nomodifiable
-    endif
+    call s:Window(settings, tags)
 
     " if the file buffer is no longer in the same window it was, then find its
     " new location. Occurs when taglist first opens.
@@ -713,9 +728,9 @@ function! s:ProcessTags(on_open_or_write)
   else
     " if the file isn't supported, then don't open the taglist window if it
     " isn't open already.
-    let winnum = bufwinnr(g:TagList_title)
+    let winnum = bufwinnr(s:taglisttoo_title_escaped)
     if winnum != -1
-      call s:Window({}, tags, [[],[]])
+      call s:Window({'tags': {}}, tags)
       winc p
     endif
   endif
@@ -723,35 +738,77 @@ function! s:ProcessTags(on_open_or_write)
   call s:ShowCurrentTag()
 endfunction " }}}
 
-" s:ParseOutputLine(line) {{{
-function! s:ParseOutputLine(line)
-  let pre = substitute(a:line, '\(.\{-}\)\t\/\^.*', '\1', '')
-  let pattern = substitute(a:line, '.\{-}\(\/\^.*\$\/;"\).*', '\1', '')
-  let post = substitute(a:line, '.*\$\/;"\t', '', '')
-  return split(pre, '\t') + [pattern] + split(post, '\t')
+" s:Parse(filename, settings) {{{
+function! s:Parse(filename, settings)
+python << PYTHONEOF
+settings = vim.eval('a:settings')
+filename = vim.eval('a:filename')
+lang = settings['lang']
+types = ''.join(settings['tags'].keys())
+
+retcode, result = taglisttoo.ctags(lang, types, filename)
+vim.command('let retcode = %i' % retcode)
+vim.command("let result = '%s'" % result.replace("'", "''"))
+PYTHONEOF
+
+  if retcode
+    call s:EchoError('taglist failed with error code: ' . retcode)
+    return
+  endif
+
+  if has('win32') || has('win64') || has('win32unix')
+    let result = substitute(result, "\<c-m>\n", '\n', 'g')
+  endif
+
+  let results = split(result, '\n')
+  while len(results) && results[0] =~ 'ctags.*: Warning:'
+    call remove(results, 0)
+  endwhile
+
+  let parsed_results = []
+  for result in results
+    let pre = substitute(result, '\(.\{-}\)\t\/\^.*', '\1', '')
+    let pattern = substitute(result, '.\{-}\(\/\^.*\$\/;"\).*', '\1', '')
+    let post = substitute(result, '.*\$\/;"\t', '', '')
+
+    let [name, filename] = split(pre, '\t')
+    let parts = split(post, '\t')
+    let [type, line_str] = parts[:1]
+    exec 'let line = ' . substitute(line_str, 'line:', '', '')
+    let pattern = substitute(pattern, '^/\(.*\)/;"$', '\1', '')
+    let parent = len(parts) > 2 ? parts[2] : ''
+
+    call add(parsed_results, {
+        \ 'type': type,
+        \ 'name': name,
+        \ 'pattern': pattern,
+        \ 'line': line,
+        \ 'parent': parent,
+      \ })
+  endfor
+
+  return parsed_results
 endfunction " }}}
 
 " s:FormatDefault(types, tags) {{{
-" All format functions must return a two element list containing:
-" result[0] - A list of length len(result[1]) where each value specifies the
-"             tag index such that result[0][line('.') - 1] == tag index for
-"             the current line.
-"             For content lines that do no map to a tag, use -1 as the value.
-" result[1] - A list of lines to be inserted as content into the taglist
-"             window.
 function! s:FormatDefault(types, tags)
-  let lines = []
-  let content = []
-
-  call add(content, expand('%:t'))
-  call add(lines, -1)
+  let formatter = taglisttoo#util#Formatter(a:tags)
+  call formatter.filename()
 
   for key in keys(a:types)
-    let values = filter(copy(a:tags), 'len(v:val) > 3 && v:val[3] == key')
-    call eclim#taglist#util#FormatType(a:tags, a:types[key], values, lines, content, "\t")
+    let values = filter(copy(a:tags), 'v:val.type == key')
+    if len(values)
+      call formatter.blank()
+    endif
+    call formatter.format(a:types[key], values, "\t")
   endfor
 
-  return [lines, content]
+  return formatter
+endfunction " }}}
+
+" s:FormatEmpty(types, tags) {{{
+function! s:FormatEmpty(types, tags)
+  return taglisttoo#util#Formatter(a:tags)
 endfunction " }}}
 
 " s:GetTagInfo() {{{
@@ -768,13 +825,22 @@ function! s:GetTagInfo()
   return b:taglisttoo_tags[index]
 endfunction " }}}
 
+" s:EchoError(message) {{{
+function! s:EchoError(message)
+  echohl Error
+  echo a:message
+  echohl Normal
+endfunction " }}}
+
 " s:EchoTag() {{{
 function! s:EchoTag()
-  let tag_info = s:GetTagInfo()
-  if len(tag_info)
-    echo 'tag: ' . tag_info[0]
-  else
-    echo ''
+  if g:TaglistTooTagEcho
+    let tag_info = s:GetTagInfo()
+    if len(tag_info)
+      echo 'tag: ' . tag_info.name
+    else
+      echo ''
+    endif
   endif
 endfunction " }}}
 
@@ -785,22 +851,18 @@ function! s:JumpToTag()
     return
   endif
 
-  call s:StopAutocmds()
-
   " handle case of buffer open in multiple windows.
   if s:taglisttoo_prevwinnr &&
    \ winbufnr(s:taglisttoo_prevwinnr) == b:taglisttoo_file_bufnr
-    exec s:taglisttoo_prevwinnr . 'winc w'
+    noautocmd exec s:taglisttoo_prevwinnr . 'winc w'
   else
-    exec bufwinnr(b:taglisttoo_file_bufnr) . 'winc w'
+    noautocmd exec bufwinnr(b:taglisttoo_file_bufnr) . 'winc w'
   endif
 
-  call s:StartAutocmds()
+  let lnum = tag_info.line
+  let pattern = tag_info.pattern
 
-  let lnum = s:GetTagLineNumber(tag_info)
-  let pattern = eclim#taglist#util#GetTagPattern(tag_info)
-
-  " account for my plugin which removes trailing spaces from the file
+  " account for any plugins which may remove trailing spaces from the file
   let pattern = escape(pattern, '.~*[]')
   let pattern = substitute(pattern, '\s\+\$$', '\\s*$', '')
 
@@ -847,8 +909,8 @@ function! s:JumpToTag()
   endif
 endfunction " }}}
 
-" s:Window(types, tags, content) {{{
-function! s:Window(types, tags, content)
+" s:Window(settings, tags) {{{
+function! s:Window(settings, tags)
   let filename = expand('%:t')
   let file_bufnr = bufnr('%')
 
@@ -859,11 +921,21 @@ function! s:Window(types, tags, content)
       let buffers[bufname(bufnum)] = bufnum
     endif
   endfor
-  if has_key(buffers, g:TagList_title)
-    let winnum = bufwinnr(buffers[g:TagList_title])
-    exe winnum . 'wincmd w'
+
+  if has_key(buffers, s:taglisttoo_title)
+    let winnum = bufwinnr(buffers[s:taglisttoo_title])
   else
-    call eclim#display#window#VerticalToolWindowOpen(g:TagList_title, 10, 1)
+    if exists('g:VerticalToolWindowSide') &&
+     \ g:VerticalToolWindowSide == g:TaglistTooPosition
+      call eclim#display#window#VerticalToolWindowOpen(s:taglisttoo_title, 10, 1)
+    else
+      let position = g:TaglistTooPosition == 'right' ? 'botright' : 'topleft'
+      silent exec
+        \ position . ' vertical ' . g:Tlist_WinWidth .
+        \ ' split ' . escape(s:taglisttoo_title, ' ')
+    endif
+
+    let winnum = winnr()
 
     setlocal filetype=taglist
     setlocal buftype=nofile
@@ -872,6 +944,8 @@ function! s:Window(types, tags, content)
     setlocal nobuflisted
     setlocal nowrap
     setlocal tabstop=2
+    setlocal winfixwidth
+    setlocal nonumber
 
     syn match TagListFileName "^.*\%1l.*"
     hi link TagListFileName Identifier
@@ -879,19 +953,41 @@ function! s:Window(types, tags, content)
     hi TagListCurrentTag term=bold,underline cterm=bold,underline gui=bold,underline
 
     nnoremap <silent> <buffer> <cr> :call <SID>JumpToTag()<cr>
+
+    noautocmd wincmd p
   endif
+
+  if has_key(a:settings, 'format')
+    let formatter = a:settings.format
+  elseif len(a:tags)
+    if g:Tlist_Sort_Type == 'name'
+      call sort(a:tags, 'taglisttoo#util#SortTags')
+    endif
+    let formatter = 's:FormatDefault'
+  else
+    let formatter = 's:FormatEmpty'
+  endif
+
+  let format = function(formatter)(a:settings.tags, a:tags)
+  let content = format.content
+  exe winnum . 'wincmd w'
+
+  silent! syn clear TagListKeyword
+  for syn_cmd in format.syntax
+    exec syn_cmd
+  endfor
 
   let pos = [0, 1, 1, 0]
   " if we are updating the taglist for the same file, then preserve the
   " cursor position.
-  if len(a:content[1]) > 0 && getline(1) == a:content[1][0]
+  if len(content) > 0 && getline(1) == content[0]
     let pos = getpos('.')
   endif
 
   setlocal modifiable
   silent 1,$delete _
-  call append(1, a:content[1])
-  silent retab
+  call append(1, content)
+  silent! %s/\t/  /g
   silent 1,1delete _
   setlocal nomodifiable
 
@@ -900,26 +996,20 @@ function! s:Window(types, tags, content)
   " if the entire taglist can fit in the window, then reposition the content
   " just in case the previous contents result in the current contents being
   " scrolled up a bit.
-  if len(a:content[1]) < winheight(winnr())
+  if len(content) < winheight(winnr())
     normal! zb
   endif
 
-  silent! syn clear TagListKeyword
-  for value in values(a:types)
-    exec 'syn keyword TagListKeyword ' . value
-  endfor
-  syn match TagListKeyword /^Warning:/
-
-  let b:taglisttoo_content = a:content
+  let b:taglisttoo_content = [format.lines, content]
   let b:taglisttoo_tags = a:tags
   let b:taglisttoo_file_bufnr = file_bufnr
 endfunction " }}}
 
 " s:ShowCurrentTag() {{{
 function! s:ShowCurrentTag()
-  if s:FileSupported(expand('%:p'), &ft) && bufwinnr(g:TagList_title) != -1
-    let tags = getbufvar(g:TagList_title, 'taglisttoo_tags')
-    let content = getbufvar(g:TagList_title, 'taglisttoo_content')
+  if s:FileSupported(expand('%:p'), &ft) && bufwinnr(s:taglisttoo_title_escaped) != -1
+    let tags = getbufvar(s:taglisttoo_title_escaped, 'taglisttoo_tags')
+    let content = getbufvar(s:taglisttoo_title_escaped, 'taglisttoo_content')
 
     let clnum = line('.')
     let tlnum = 0
@@ -927,7 +1017,7 @@ function! s:ShowCurrentTag()
 
     let index = 0
     for tag in tags
-      let lnum = s:GetTagLineNumber(tag)
+      let lnum = tag.line
       let diff = clnum - lnum
       if diff >= 0 && (diff < (clnum - tlnum))
         let tlnum = lnum
@@ -939,9 +1029,9 @@ function! s:ShowCurrentTag()
 
     if exists('current')
       let cwinnum = winnr()
-      let twinnum = bufwinnr(g:TagList_title)
+      let twinnum = bufwinnr(s:taglisttoo_title_escaped)
 
-      call eclim#util#ExecWithoutAutocmds(twinnum . 'winc w')
+      exec 'noautocmd ' . twinnum . 'winc w'
 
       let index = index(content[0], tindex) + 1
       syn clear TagListCurrentTag
@@ -951,7 +1041,7 @@ function! s:ShowCurrentTag()
         call winline()
       endif
 
-      call eclim#util#ExecWithoutAutocmds(cwinnum . 'winc w')
+      exec 'noautocmd ' . cwinnum . 'winc w'
     endif
   endif
 endfunction " }}}
@@ -969,7 +1059,7 @@ function! s:FileSupported(filename, ftype)
   " If it is not available, then check whether user specified settings are
   " available. If both are not available, then don't list the tags for this
   " filetype
-  let var = 's:tlist_def_' . a:ftype . '_settings'
+  let var = 's:tlist_' . a:ftype . '_settings'
   if !exists(var)
     let var = 'g:tlist_' . a:ftype . '_settings'
     if !exists(var)
@@ -986,12 +1076,18 @@ function! s:FileSupported(filename, ftype)
   return 1
 endfunction " }}}
 
-" s:GetTagLineNumber(tag) {{{
-function! s:GetTagLineNumber(tag)
-  if len(a:tag) > 4
-    return substitute(a:tag[4], '.*:\(.*\)', '\1', '')
+" s:CloseIfLastWindow() {{{
+function! s:CloseIfLastWindow()
+  if histget(':', -1) !~ '^bd'
+    let numtoolwindows = 0
+    if winnr('$') == 1
+      if tabpagenr('$') > 1
+        tabclose
+      else
+        quitall
+      endif
+    endif
   endif
-  return 0
 endfunction " }}}
 
 " vim:ft=vim:fdm=marker

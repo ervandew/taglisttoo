@@ -1,87 +1,90 @@
 " Author:  Eric Van Dewoestine
 "
-" Description: {{{
-"   see http://eclim.org/vim/taglist.html
+" License: {{{
+"   Copyright (c) 2005 - 2010, Eric Van Dewoestine
+"   All rights reserved.
 "
-" License:
+"   Redistribution and use of this software in source and binary forms, with
+"   or without modification, are permitted provided that the following
+"   conditions are met:
 "
-" Copyright (C) 2005 - 2010  Eric Van Dewoestine
+"   * Redistributions of source code must retain the above
+"     copyright notice, this list of conditions and the
+"     following disclaimer.
 "
-" This program is free software: you can redistribute it and/or modify
-" it under the terms of the GNU General Public License as published by
-" the Free Software Foundation, either version 3 of the License, or
-" (at your option) any later version.
+"   * Redistributions in binary form must reproduce the above
+"     copyright notice, this list of conditions and the
+"     following disclaimer in the documentation and/or other
+"     materials provided with the distribution.
 "
-" This program is distributed in the hope that it will be useful,
-" but WITHOUT ANY WARRANTY; without even the implied warranty of
-" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-" GNU General Public License for more details.
+"   * Neither the name of Eric Van Dewoestine nor the names of its
+"     contributors may be used to endorse or promote products derived from
+"     this software without specific prior written permission of
+"     Eric Van Dewoestine.
 "
-" You should have received a copy of the GNU General Public License
-" along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"
+"   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+"   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+"   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+"   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+"   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+"   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+"   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+"   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+"   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+"   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+"   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 " }}}
 
-" FormatJava(types, tags) {{{
-function! eclim#taglist#lang#java#FormatJava(types, tags)
-  let lines = []
-  let content = []
+" Format(types, tags) {{{
+function! taglisttoo#lang#java#Format(types, tags)
+  let formatter = taglisttoo#util#Formatter(a:tags)
+  call formatter.filename()
 
-  call add(content, expand('%:t'))
-  call add(lines, -1)
+  let package = filter(copy(a:tags), 'v:val.type == "p"')
+  call formatter.format(a:types['p'], package, '')
 
-  let package = filter(copy(a:tags), 'v:val[3] == "p"')
-  call eclim#taglist#util#FormatType(
-      \ a:tags, a:types['p'], package, lines, content, "\t")
-
-  let classes = filter(copy(a:tags), 'v:val[3] == "c"')
+  let classes = filter(copy(a:tags), 'v:val.type == "c"')
 
   " sort classes alphabetically except for the primary containing class.
   if len(classes) > 1 && g:Tlist_Sort_Type == 'name'
-    let classes = [classes[0]] + sort(classes[1:])
+    let classes = [classes[0]] + sort(classes[1:], 'taglisttoo#util#SortTags')
   endif
 
   for class in classes
-    call add(content, "")
-    call add(lines, -1)
-    let visibility = eclim#taglist#util#GetVisibility(class)
-    call add(content, "\t" . visibility . a:types['c'] . ' ' . class[0])
-    call add(lines, index(a:tags, class))
+    call formatter.blank()
+
+    let visibility = taglisttoo#util#GetVisibility(class)
+    call formatter.heading(a:types['c'], class, '')
 
     let fields = filter(copy(a:tags),
-      \ 'v:val[3] == "f" && len(v:val) > 5 && v:val[5] =~ "class:.*\\<" . class[0] . "$"')
-    call eclim#taglist#util#FormatType(
-        \ a:tags, a:types['f'], fields, lines, content, "\t\t")
+      \ 'v:val.type == "f" && v:val.parent =~ "class:.*\\<" . class.name . "$"')
+    call formatter.format(a:types['f'], fields, "\t")
 
     let methods = filter(copy(a:tags),
-      \ 'v:val[3] == "m" && len(v:val) > 5 && v:val[5] =~ "class:.*\\<" . class[0] . "$"')
-    call eclim#taglist#util#FormatType(
-        \ a:tags, a:types['m'], methods, lines, content, "\t\t")
+      \ 'v:val.type == "m" && v:val.parent =~ "class:.*\\<" . class.name . "$"')
+    call formatter.format(a:types['m'], methods, "\t")
   endfor
 
-  let interfaces = filter(copy(a:tags), 'v:val[3] == "i"')
+  let interfaces = filter(copy(a:tags), 'v:val.type == "i"')
   if g:Tlist_Sort_Type == 'name'
-    call sort(interfaces)
+    call sort(interfaces, 'taglisttoo#util#SortTags')
   endif
   for interface in interfaces
-    call add(content, "")
-    call add(lines, -1)
-    let visibility = eclim#taglist#util#GetVisibility(interface)
-    call add(content, "\t" . visibility . a:types['i'] . ' ' . interface[0])
-    call add(lines, index(a:tags, interface))
+    call formatter.blank()
+
+    let visibility = taglisttoo#util#GetVisibility(interface)
+    call formatter.heading(a:types['i'], interface, '')
 
     let fields = filter(copy(a:tags),
-      \ 'v:val[3] == "f" && len(v:val) > 5 && v:val[5] =~ "interface:.*\\<" . interface[0] . "$"')
-    call eclim#taglist#util#FormatType(
-        \ a:tags, a:types['f'], fields, lines, content, "\t\t")
+      \ 'v:val.type == "f" && v:val.parent =~ "interface:.*\\<" . interface.name . "$"')
+    call formatter.format(a:types['f'], fields, "\t")
 
     let methods = filter(copy(a:tags),
-      \ 'v:val[3] == "m" && len(v:val) > 5 && v:val[5] =~ "interface:.*\\<" . interface[0] . "$"')
-    call eclim#taglist#util#FormatType(
-        \ a:tags, a:types['m'], methods, lines, content, "\t\t")
+      \ 'v:val.type == "m" && v:val.parent =~ "interface:.*\\<" . interface.name . "$"')
+    call formatter.format(a:types['m'], methods, "\t")
   endfor
 
-  return [lines, content]
+  return formatter
 endfunction " }}}
 
 " vim:ft=vim:fdm=marker

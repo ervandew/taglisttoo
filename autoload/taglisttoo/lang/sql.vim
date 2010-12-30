@@ -35,32 +35,23 @@
 "   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 " }}}
 
-" Format(types, tags) {{{
-function! taglisttoo#lang#python#Format(types, tags)
-  let formatter = taglisttoo#util#Formatter(a:tags)
-  call formatter.filename()
-
-  let functions = filter(copy(a:tags), 'v:val.type == "f"')
-  if len(functions)
-    call formatter.blank()
-    call formatter.format(a:types['f'], functions, '')
-  endif
-
-  let classes = filter(copy(a:tags), 'v:val.type == "c"')
-  if g:Tlist_Sort_Type == 'name'
-    call sort(classes, 'taglisttoo#util#SortTags')
-  endif
-
-  for class in classes
-    call formatter.blank()
-    call formatter.heading(a:types['c'], class, '')
-
-    let members = filter(copy(a:tags),
-        \ 'v:val.type == "m" && v:val.parent == "class:" . class.name')
-    call formatter.format(a:types['m'], members, "\t")
-  endfor
-
-  return formatter
+" Parse(file, settings) {{{
+function! taglisttoo#lang#sql#Parse(file, settings)
+  return taglisttoo#util#Parse(a:file, [
+      \ ['g', 'create\s+(?:group|role)\s+([a-zA-Z0-9_.]+)', 1, 'i'],
+      \ ['u', 'create\s+user\s+([a-zA-Z0-9_.]+)', 1, 'i'],
+      \ ['p', 'create\s+(?:tablespace|dbspace)\s+([a-zA-Z0-9_.]+)', 1, 'i'],
+      \ ['s', 'create\s+schema\s+([a-zA-Z0-9_.]+)', 1, 'i'],
+      \ ['t', 'create\s+(?:temporary\s+)?table\s+(?:if\s+not\s+exists\s+)?[`]?([a-zA-Z0-9_.]+)[`]?', 1, 'i'],
+      \ ['v', 'create\s+(?:or\s+replace\s+)?view\s+([a-zA-Z0-9_.]+)', 1, 'i'],
+      \ ['q', 'create\s+sequence\s+([a-zA-Z0-9_.]+)', 1, 'i'],
+      \ ['x', 'create\s+(?:or\s+replace\s+)?trigger\s+([a-zA-Z0-9_.]+)', 1, 'i'],
+      \ ['f', 'create\s+(?:or\s+replace\s+)?function\s+([a-zA-Z0-9_.]+)', 1, 'i'],
+      \ ['c', 'create\s+(?:or\s+replace\s+)?procedure\s+([a-zA-Z0-9_.]+)', 1, 'i'],
+      \ ['r', "exec\\s+sp_addrole\\s+['\"]([a-zA-Z0-9_.]+)['\"]", 1, 'i'],
+      \ ['m', "exec\\s+sp_addlogin\\s+@loginname=['\"](.*?)['\"]", 1, 'i'],
+      \ ['z', 'alter\s+database.*add\s+filegroup\s+([a-zA-Z0-9_.]+)', 1, 'i'],
+    \ ])
 endfunction " }}}
 
 " vim:ft=vim:fdm=marker

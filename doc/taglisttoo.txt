@@ -1,0 +1,256 @@
+*taglisttoo.txt*
+
+-----------------------------------------------------------------------------
+TaglistToo                                       *taglisttoo* *TaglistToo*
+
+  Prerequisites                      |taglisttoo-prerequisites|
+  Overview                           |taglisttoo-overview|
+  Usage                              |taglisttoo-usage|
+  Configuration                      |taglisttoo-configuration|
+  Extending / Customizing            |taglisttoo-customization|
+    Parsing New File Types           |taglisttoo-parse|
+    Customizing taglist Contents     |taglisttoo-format|
+
+-----------------------------------------------------------------------------
+Prerequisites                                    *taglisttoo-prerequisites*
+
+TaglistToo requires the following:
+
+1. Exuberant Ctags to be installed: http://ctags.sourceforge.net/
+2. Vim 7.x
+3. Python support compiled into (g)vim
+
+-----------------------------------------------------------------------------
+Overview                                         *taglisttoo-overview*
+
+TaglistToo is a plugin which provides an outline of the current source file in
+a separate window allowing you to quickly see the classes, methods, functions,
+etc available and to jump to them quickly. This plugin is very similar to the
+excellent taglist[1] plugin written by Yegappan Lakshmanan. The motivation
+for creating an alternative to the hugely popular taglist plugin is that the
+original was written prior to vim 7.0 and so was forced to use data structures
+which are very difficult to work with to hold and display the tag information.
+These data structures make it hard to customize taglist, so TaglistToo aims to
+provide similar functionality but leveraging vim 7.0+ lists and dictionaries
+to hold tag information and providing hooks allowing you to customize the
+resulting taglist window's layout and to add support for new file types not
+natively supported by ctags.
+
+[1] http://www.vim.org/scripts/script.php?script_id=273
+
+Here is a list of enhancements vs unimplemented features from which to compare
+TaglistToo to the original taglist.vim:
+
+Enhancements not found in the original taglist:
+
+- Supports an extension mechanism allowing the taglist display to be
+  customized by file type.
+- Provides custom displays for a handful of languages (java, javascript, php,
+  python, etc.) which groups methods and variables by object/class for easier
+  viewing and navigation.
+- Supports denoting tags based on their visibility (+public, -private,
+  *static, #protected).
+- Provides the ability to add support for new file types not supported by
+  ctags.
+- Echoing of the current tag while scrolling through the taglist window, which
+  is helpful if the tag name doesn't fit in the width of taglist window.
+
+Unimplemented features found in the original taglist:
+
+- Drop down list in gvim with the list of tags.
+- Tag re-sorting
+- Support for tags for more than one file in the taglist window.
+- ... possibly others.
+
+Other than the feature differences the behavior of TaglistToo is very similar
+to the original taglist.
+
+-----------------------------------------------------------------------------
+Usage                                            *taglisttoo-usage*
+                                                 *:TlistToo*
+
+To open the taglist window simply run the command :TlistToo. As long as the
+current file type is supported and exists on disk, the taglist window will
+open and display an outline of the file. Executing :TlistToo again will close
+the taglist window.
+
+Within the taglist window you can jump to a particular tag in the source file
+by hitting <Enter> on the tag.
+
+-----------------------------------------------------------------------------
+Configuration                                    *taglisttoo-configuration*
+
+In an attempt to make your transition from the original taglist to TaglistToo
+as easy as possible, TaglistToo supports a some of the same configuration
+variables:
+
+- *g:Tlist_Ctags_Cmd* - Sets the location or your ctags executable (if not
+  set, TaglistToo will try to find either exuberant-ctags or ctags on your
+  path).
+- *g:Tlist_Auto_Open* (Default: 0) - When non-zero, the taglist will auto open
+  at vim startup if the file type is supported.
+- *g:Tlist_WinWidth* (Default: 30) - Sets the width of the taglist window.
+- *g:Tlist_Sort_Type* (Default: 'name') - Determines how the tags should be
+  sorted in the taglist window. When set to 'name', the tags will be sorted
+  alphabetically, but when set to 'order' the tags will be sorted by their
+  occurrence in the source file.
+- *g:TagList_title* (Default: '[TagList]') - Sets the name of the taglist
+  window.
+- g:Tlist_Use_Right_Window - Preferably you should set the
+  |g:TaglistTooPosition| variable, but for compatibility with the original
+  taglist, if this variable is set to a non-0 value then
+  |g:TaglistTooPosition| will be set to 'right'.
+
+Some TaglistToo specific variables:
+
+- *g:TaglistTooEnabled* (Default: 1) - When set to 0 this disables loading of
+  TaglistToo.
+- *g:TaglistTooPosition* (Default: 'left') - This determines whether the
+  taglist window will be opened on the left or right side of vim. Supported
+  values include 'left' and 'right'.
+- *g:TaglistTooTagEcho* (Default: 1) - When set to a non 0 value, when moving
+  the cursor in the taglist window, the name of the tag under the cursor will
+  be echoed to the vim command line.
+
+-----------------------------------------------------------------------------
+Extending / Customizing                          *taglisttoo-customization*
+
+For compatibility with the original taglist, TagListToo supports the same
+g:tlist_{ft}_settings variables including the string format: >
+
+    let g:tlist_mylang_settings = 'mylang;t:mytype;f:myfield'
+>
+
+However, since vim 7 and above has support for lists and dictionaries, the
+above setting can be expressed for TaglistToo as follows: >
+
+    let g:tlist_mylang_settings = {
+        \ 'lang': 'mylang',
+        \ 'tags': {
+          \ 't': 'mytype',
+          \ 'f': 'myfield',
+        \ }
+      \ }
+>
+
+The one character keys in the 'tags' dictionary are what will be passed to
+ctags --<lang>-types argument, and the value for those keys is the text to be
+displayed in the taglist window.
+
+Parsing New File Types:                          *taglisttoo-parse*
+
+The default method for which TaglistToo obtains the list of tags for a given
+source file is to use ctags. If you want to add a new language which isn't
+supported by ctags by default you generally have a couple options:
+
+1. You can define a new language via regular expression patterns in your
+   .ctags file using the langdef, langmap, and --regex-<lang> options.
+2. You can write a C extension to ctags.
+
+The first approach, while fairly simple, is a bit limiting. The most
+frustrating limitation is that the file to be parse is processed one line at a
+time, which prevents you from identifying tags that span two or more lines.
+
+For example, given the following web.xml file, you would not be able to
+distinguish between the first block which is a servlet definition, and the
+second which is a servlet mapping, because you would need to process the parent
+tag, not just the servlet-name tag: >
+
+  <servlet>
+    <servlet-name>MyServlet</servlet-name>
+    <servlet-class>org.foo.MyServlet</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>MyServlet</servlet-name>
+    <servlet-class>/my-servlet</servlet-class>
+  </servlet-mapping>
+>
+
+The second approach, is much more flexible, but writing a language processor in
+C may not be a feasible solution for various reasons (unfamiliarity with C,
+portability, etc.).
+
+Taking into account these concerns, TaglistToo provides the means to add new
+languages by allowing you to configure a vim script function to be executed to
+obtain the tags. In this function you can process the file however you would
+like, but TaglistToo provides a simple utility function allowing you to supply
+a list of tag types, python compatible regular expressions, and the
+replacement text or group used to obtain the tag name.
+
+Here is an example function which processes the web.xml file described above: >
+
+  function! ParseWebXml(file, settings)
+    return taglisttoo#util#Parse(a:file, [
+        \ ['s', '<servlet\s*>\s*<servlet-name\s*>\s*(.*?)\s*</servlet-name\s*>', 1],
+        \ ['m', '<servlet-mapping\s*>\s*<servlet-name\s*>\s*(.*?)\s*</servlet-name\s*>', 1],
+      \ ])
+  endfunction
+>
+
+There are a couple things to note about how these regular expressions are
+evaluated:
+
+1. When compiling the regular expression the DOTALL and MULTILINE flags are
+   always set.
+2. The regular expressions are executed against the whole file at once.
+3. If you would like to have the IGNORECASE flag set as well, simply add a
+   'i' as a fourth value to each list where you'd like that flag enabled.
+4. The third value in each list specifies what replacement value should be
+   used to extract the tag name from the matched text. If the value is an int,
+   it is interpreted as the group number from the regular expression.  If the
+   value is a string, then a separate substitution is executed with that
+   value.  So if you had two groups you wanted to combine, you could supply
+   '\1 \2' for the third value in the supplied list.
+
+Now that you have a function which processes the file, you simply need to
+configure the taglist settings for the webxml file type: >
+
+  let g:tlist_webxml_settings = {
+      \ 'lang': 'webxml',
+      \ 'parse': 'ParseWebXml',
+      \ 'tags': {
+        \ 's': 'servlet',
+        \ 'm': 'servlet-mapping'
+      \ }
+    \ }
+>
+
+Notice the new 'parse' key introduced here which tells TaglistToo to use that
+function instead of the default one.
+
+Note: This example introduces a new file type, webxml, which doesn't exist by
+default in vim, so if you want to test this out on a real web.xml file you'll
+need to manually set the file type (:set ft=webxml).
+
+Customizing taglist contents:                    *taglisttoo-format*
+
+In addition to parsing new file types, you can also customize the taglist
+format for new or existing file types. To do so you simply tell TaglistToo to
+use a different format function. Here is an example using TagListToo's python
+settings: >
+
+  let g:tlist_python_settings = {
+      \ 'lang': 'python',
+      \ 'format': 'taglisttoo#lang#python#Format',
+      \ 'tags': {
+        \ 'c': 'class',
+        \ 'm': 'member',
+        \ 'f': 'function'
+      \ }
+    \ }
+>
+
+Instead of using the default format, TaglistToo will invoke the
+taglisttoo#lang#python#Format function which in this case will group members
+and functions by the class they are defined in and any global functions will
+be displayed at the top of the taglist window.
+
+Unfortunately, implementing a function which customizes the taglist layout is
+not as straight forward and writing one which parses a new file type. If you
+wish to write one of these format functions, currently you are best off
+copying one of the format functions defined in one of the
+autoload/taglisttoo/lang/<lang>.vim files and customizing it to your needs.
+Hopefully future versions of TaglistToo will make writing these easier.
+
+vim:tw=78:ft=help:norl:

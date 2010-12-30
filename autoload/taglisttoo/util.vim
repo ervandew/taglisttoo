@@ -1,60 +1,90 @@
 " Author:  Eric Van Dewoestine
 "
-" Description: {{{
-"   see http://eclim.org/vim/taglist.html
+" License: {{{
+"   Copyright (c) 2005 - 2010, Eric Van Dewoestine
+"   All rights reserved.
 "
-" License:
+"   Redistribution and use of this software in source and binary forms, with
+"   or without modification, are permitted provided that the following
+"   conditions are met:
 "
-" Copyright (C) 2005 - 2010  Eric Van Dewoestine
+"   * Redistributions of source code must retain the above
+"     copyright notice, this list of conditions and the
+"     following disclaimer.
 "
-" This program is free software: you can redistribute it and/or modify
-" it under the terms of the GNU General Public License as published by
-" the Free Software Foundation, either version 3 of the License, or
-" (at your option) any later version.
+"   * Redistributions in binary form must reproduce the above
+"     copyright notice, this list of conditions and the
+"     following disclaimer in the documentation and/or other
+"     materials provided with the distribution.
 "
-" This program is distributed in the hope that it will be useful,
-" but WITHOUT ANY WARRANTY; without even the implied warranty of
-" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-" GNU General Public License for more details.
+"   * Neither the name of Eric Van Dewoestine nor the names of its
+"     contributors may be used to endorse or promote products derived from
+"     this software without specific prior written permission of
+"     Eric Van Dewoestine.
 "
-" You should have received a copy of the GNU General Public License
-" along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"
+"   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+"   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+"   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+"   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+"   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+"   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+"   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+"   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+"   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+"   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+"   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 " }}}
 
-" FormatType(tags, type, values, lines, content, indent) {{{
-" tags: The list of tag results from eclim/ctags.
-" type: The display name of the tag type we are formatting.
-" values: List of tag results for the type.
-" lines: The list representing the mapping of content entries to tag info.
-" content: The list representing the display that we will add to.
-" indent: The indentation to use on the display (string).
-function! eclim#taglist#util#FormatType(tags, type, values, lines, content, indent)
-  if len(a:values) > 0
-    if g:Tlist_Sort_Type == 'name'
-      call sort(a:values)
+" Formatter(tags) {{{
+function! taglisttoo#util#Formatter(tags)
+  let formatter = {'lines': [], 'content': [], 'syntax': [], 'tags': a:tags}
+
+  function! formatter.filename() dict " {{{
+    call add(self.content, expand('%:t'))
+    call add(self.lines, -1)
+  endfunction " }}}
+
+  function! formatter.format(type, values, indent) dict " {{{
+    if len(a:values) > 0
+      if g:Tlist_Sort_Type == 'name'
+        call sort(a:values, 'taglisttoo#util#SortTags')
+      endif
+
+      call self.heading(a:type, {}, a:indent)
+
+      for value in a:values
+        let visibility = taglisttoo#util#GetVisibility(value)
+        call add(self.content, "\t" . a:indent . visibility . value.name)
+        call add(self.lines, index(self.tags, value))
+      endfor
     endif
+  endfunction " }}}
 
-    call add(a:content, a:indent . a:type)
-    call add(a:lines, -1)
+  function! formatter.heading(type, tag, indent) dict " {{{
+    if len(a:tag)
+      call add(self.lines, index(self.tags, a:tag))
+      call add(self.content, a:indent . a:type . ' ' . a:tag.name)
+      call add(self.syntax,
+        \ 'syn match TagListKeyword "^\s*' . a:type . '\%' . len(self.lines) . 'l"')
+    else
+      call add(self.lines, 'label')
+      call add(self.content, a:indent . a:type)
+      call add(self.syntax, 'syn match TagListKeyword "^.*\%' . len(self.lines) . 'l.*"')
+    endif
+  endfunction " }}}
 
-    for value in a:values
-      let visibility = eclim#taglist#util#GetVisibility(value)
-      call add(a:content, "\t" . a:indent . visibility . value[0])
-      call add(a:lines, index(a:tags, value))
-    endfor
-  endif
-endfunction " }}}
+  function! formatter.blank() dict " {{{
+    call add(self.content, '')
+    call add(self.lines, -1)
+  endfunction " }}}
 
-" GetTagPattern(tag) {{{
-function! eclim#taglist#util#GetTagPattern(tag)
-  return strpart(a:tag[2], 1, len(a:tag[2]) - 4)
+  return formatter
 endfunction " }}}
 
 " GetVisibility(tag) {{{
 " Gets the visibility string for the supplied tag.
-function! eclim#taglist#util#GetVisibility(tag)
-  let pattern = eclim#taglist#util#GetTagPattern(a:tag)
+function! taglisttoo#util#GetVisibility(tag)
+  let pattern = a:tag.pattern
   if pattern =~ '\<public\>'
     if pattern =~ '\<static\>'
       return '*'
@@ -66,6 +96,23 @@ function! eclim#taglist#util#GetVisibility(tag)
     return '-'
   endif
   return ''
+endfunction " }}}
+
+" Parse(file, patterns) {{{
+function! taglisttoo#util#Parse(file, patterns)
+python << PYTHONEOF
+filename = vim.eval('a:file')
+patterns = vim.eval('a:patterns')
+result = taglisttoo.parse(filename, patterns)
+vim.command('let result = %s' % ('%r' % result).replace("\\'", "''"))
+PYTHONEOF
+
+return result
+endfunction " }}}
+
+" SortTags(tag1, tag2) {{{
+function! taglisttoo#util#SortTags(tag1, tag2)
+  return a:tag1.name == a:tag2.name ? 0 : a:tag1.name > a:tag2.name ? 1 : -1
 endfunction " }}}
 
 " vim:ft=vim:fdm=marker

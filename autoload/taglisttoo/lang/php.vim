@@ -1,46 +1,56 @@
 " Author:  Eric Van Dewoestine
 "
-" Description: {{{
-"   see http://eclim.org/vim/taglist.html
+" License: {{{
+"   Copyright (c) 2005 - 2010, Eric Van Dewoestine
+"   All rights reserved.
 "
-" License:
+"   Redistribution and use of this software in source and binary forms, with
+"   or without modification, are permitted provided that the following
+"   conditions are met:
 "
-" Copyright (C) 2005 - 2010  Eric Van Dewoestine
+"   * Redistributions of source code must retain the above
+"     copyright notice, this list of conditions and the
+"     following disclaimer.
 "
-" This program is free software: you can redistribute it and/or modify
-" it under the terms of the GNU General Public License as published by
-" the Free Software Foundation, either version 3 of the License, or
-" (at your option) any later version.
+"   * Redistributions in binary form must reproduce the above
+"     copyright notice, this list of conditions and the
+"     following disclaimer in the documentation and/or other
+"     materials provided with the distribution.
 "
-" This program is distributed in the hope that it will be useful,
-" but WITHOUT ANY WARRANTY; without even the implied warranty of
-" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-" GNU General Public License for more details.
+"   * Neither the name of Eric Van Dewoestine nor the names of its
+"     contributors may be used to endorse or promote products derived from
+"     this software without specific prior written permission of
+"     Eric Van Dewoestine.
 "
-" You should have received a copy of the GNU General Public License
-" along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"
+"   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+"   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+"   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+"   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+"   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+"   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+"   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+"   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+"   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+"   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+"   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 " }}}
 
-" FormatPhp(types, tags) {{{
-function! eclim#taglist#lang#php#FormatPhp(types, tags)
+" Format(types, tags) {{{
+function! taglisttoo#lang#php#Format(types, tags)
   let pos = getpos('.')
 
-  let lines = []
-  let content = []
+  let formatter = taglisttoo#util#Formatter(a:tags)
+  call formatter.filename()
 
-  call add(content, expand('%:t'))
-  call add(lines, -1)
-
-  let top_functions = filter(copy(a:tags), 'v:val[3] == "f"')
+  let top_functions = filter(copy(a:tags), 'v:val.type == "f"')
 
   let class_contents = []
-  let classes = filter(copy(a:tags), 'v:val[3] == "c"')
+  let classes = filter(copy(a:tags), 'v:val.type == "c"')
   if g:Tlist_Sort_Type == 'name'
-    call sort(classes)
+    call sort(classes, 'taglisttoo#util#SortTags')
   endif
   for class in classes
-    exec 'let object_start = ' . split(class[4], ':')[1]
+    let object_start = class.line
     call cursor(object_start, 1)
     call search('{', 'W')
     let object_end = searchpair('{', '', '}', 'W')
@@ -50,7 +60,7 @@ function! eclim#taglist#lang#php#FormatPhp(types, tags)
     let index = 0
     for fct in top_functions
       if len(fct) > 3
-        exec 'let fct_line = ' . split(fct[4], ':')[1]
+        let fct_line = fct.line
         if fct_line > object_start && fct_line < object_end
           call add(functions, fct)
           call add(indexes, index)
@@ -67,12 +77,12 @@ function! eclim#taglist#lang#php#FormatPhp(types, tags)
   endfor
 
   let interface_contents = []
-  let interfaces = filter(copy(a:tags), 'v:val[3] == "i"')
+  let interfaces = filter(copy(a:tags), 'v:val.type == "i"')
   if g:Tlist_Sort_Type == 'name'
-    call sort(interfaces)
+    call sort(interfaces, 'taglisttoo#util#SortTags')
   endif
   for interface in interfaces
-    exec 'let object_start = ' . split(interface[4], ':')[1]
+    let object_start = interface.line
     call cursor(object_start, 1)
     call search('{', 'W')
     let object_end = searchpair('{', '', '}', 'W')
@@ -82,7 +92,7 @@ function! eclim#taglist#lang#php#FormatPhp(types, tags)
     let index = 0
     for fct in top_functions
       if len(fct) > 3
-        exec 'let fct_line = ' . split(fct[4], ':')[1]
+        let fct_line = fct.line
         if fct_line > object_start && fct_line < object_end
           call add(functions, fct)
           call add(indexes, index)
@@ -99,35 +109,34 @@ function! eclim#taglist#lang#php#FormatPhp(types, tags)
   endfor
 
   if len(top_functions) > 0
-    call add(content, "")
-    call add(lines, -1)
-    call eclim#taglist#util#FormatType(
-        \ a:tags, a:types['f'], top_functions, lines, content, "\t")
+    call formatter.blank()
+    call formatter.format(a:types['f'], top_functions, '')
   endif
 
   for class_content in class_contents
-    call add(content, "")
-    call add(lines, -1)
-    call add(content, "\t" . a:types['c'] . ' ' . class_content.class[0])
-    call add(lines, index(a:tags, class_content.class))
-
-    call eclim#taglist#util#FormatType(
-        \ a:tags, a:types['f'], class_content.functions, lines, content, "\t\t")
+    call formatter.blank()
+    call formatter.heading(a:types['c'], class_content.class, '')
+    call formatter.format(a:types['f'], class_content.functions, "\t")
   endfor
 
   for interface_content in interface_contents
-    call add(content, "")
-    call add(lines, -1)
-    call add(content, "\t" . a:types['i'] . ' ' . interface_content.interface[0])
-    call add(lines, index(a:tags, interface_content.interface))
-
-    call eclim#taglist#util#FormatType(
-        \ a:tags, a:types['f'], interface_content.functions, lines, content, "\t\t")
+    call formatter.blank()
+    call formatter.heading(a:types['i'], interface_content.interface, '')
+    call formatter.format(a:types['f'], interface_content.functions, "\t")
   endfor
 
   call setpos('.', pos)
 
-  return [lines, content]
+  return formatter
+endfunction " }}}
+
+" Parse(file, settings) {{{
+function! taglisttoo#lang#php#Parse(file, settings)
+  return taglisttoo#util#Parse(a:file, [
+      \ ['f', '\bfunction\s+([a-zA-Z0-9_]+)\s*\(', 1],
+      \ ['c', '\bclass\s+([a-zA-Z0-9_]+)', 1],
+      \ ['i', '\binterface\s+([a-zA-Z0-9_]+)', 1],
+    \ ])
 endfunction " }}}
 
 " vim:ft=vim:fdm=marker
