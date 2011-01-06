@@ -800,7 +800,7 @@ function! s:FormatDefault(types, tags)
     if len(values)
       call formatter.blank()
     endif
-    call formatter.format(a:types[key], values, "\t")
+    call formatter.format(a:types[key], values, "")
   endfor
 
   return formatter
@@ -986,8 +986,9 @@ function! s:Window(settings, tags)
 
   setlocal modifiable
   silent 1,$delete _
-  call append(1, content)
-  silent! %s/\t/  /g
+  for line in content
+    call append('$', substitute(line, "\t", '  ', 'g'))
+  endfor
   silent 1,1delete _
   setlocal nomodifiable
 
