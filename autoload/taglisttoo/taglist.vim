@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2010, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2011, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -768,8 +768,8 @@ PYTHONEOF
   let parsed_results = []
   for result in results
     let pre = substitute(result, '\(.\{-}\)\t\/\^.*', '\1', '')
-    let pattern = substitute(result, '.\{-}\(\/\^.*\$\/;"\).*', '\1', '')
-    let post = substitute(result, '.*\$\/;"\t', '', '')
+    let pattern = substitute(result, '.\{-}\(\/\^.*\/;"\).*', '\1', '')
+    let post = substitute(result, '.\{-}\/\^.*\/;"\t', '', '')
 
     let [name, filename] = split(pre, '\t')
     let parts = split(post, '\t')
