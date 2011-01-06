@@ -911,7 +911,6 @@ endfunction " }}}
 
 " s:Window(settings, tags) {{{
 function! s:Window(settings, tags)
-  let filename = expand('%:t')
   let file_bufnr = bufnr('%')
 
   let buffers = {}
@@ -955,6 +954,16 @@ function! s:Window(settings, tags)
     nnoremap <silent> <buffer> <cr> :call <SID>JumpToTag()<cr>
 
     noautocmd wincmd p
+    " handle hopefully rare case where the previous window is not the file's
+    " window.
+    if file_bufnr != bufnr('%')
+      let file_winnr = bufwinnr(file_bufnr)
+      if file_winnr != -1
+        exec 'noautocmd ' . file_winnr . 'wincmd w'
+      else
+        return
+      endif
+    endif
   endif
 
   if has_key(a:settings, 'format')
