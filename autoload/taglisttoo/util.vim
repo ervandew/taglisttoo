@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2010, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2011, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -35,8 +35,7 @@
 "   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 " }}}
 
-" Formatter(tags) {{{
-function! taglisttoo#util#Formatter(tags)
+function! taglisttoo#util#Formatter(tags) " {{{
   let formatter = {'lines': [], 'content': [], 'syntax': [], 'tags': a:tags}
 
   function! formatter.filename() dict " {{{
@@ -81,9 +80,7 @@ function! taglisttoo#util#Formatter(tags)
   return formatter
 endfunction " }}}
 
-" GetVisibility(tag) {{{
-" Gets the visibility string for the supplied tag.
-function! taglisttoo#util#GetVisibility(tag)
+function! taglisttoo#util#GetVisibility(tag) " {{{
   let pattern = a:tag.pattern
   if pattern =~ '\<public\>'
     if pattern =~ '\<static\>'
@@ -98,8 +95,7 @@ function! taglisttoo#util#GetVisibility(tag)
   return ''
 endfunction " }}}
 
-" Parse(file, patterns) {{{
-function! taglisttoo#util#Parse(file, patterns)
+function! taglisttoo#util#Parse(file, patterns) " {{{
 python << PYTHONEOF
 filename = vim.eval('a:file')
 patterns = vim.eval('a:patterns')
@@ -110,8 +106,7 @@ PYTHONEOF
 return result
 endfunction " }}}
 
-" SortTags(tag1, tag2) {{{
-function! taglisttoo#util#SortTags(tag1, tag2)
+function! taglisttoo#util#SortTags(tag1, tag2) " {{{
   return a:tag1.name == a:tag2.name ? 0 : a:tag1.name > a:tag2.name ? 1 : -1
 endfunction " }}}
 

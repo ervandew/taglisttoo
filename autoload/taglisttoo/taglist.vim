@@ -467,8 +467,7 @@ let s:tlist_xsd_settings = {
 let s:tlist_yacc_settings = {'lang': 'yacc', 'tags': {'l': 'label'}}
 " }}}
 
-" AutoOpen() {{{
-function! taglisttoo#taglist#AutoOpen()
+function! taglisttoo#taglist#AutoOpen() " {{{
   let open_window = 0
 
   let i = 1
@@ -554,8 +553,7 @@ function! taglisttoo#taglist#Restore()
   endif
 endfunction " }}}
 
-" s:Init() {{{
-function! s:Init()
+function! s:Init() " {{{
 python << PYTHONEOF
 import sys, vim
 path = vim.eval('s:python_path')
@@ -565,8 +563,7 @@ if path not in sys.path:
 PYTHONEOF
 endfunction " }}}
 
-" s:StartAutocmds() {{{
-function! s:StartAutocmds()
+function! s:StartAutocmds() " {{{
   augroup taglisttoo_file
     autocmd!
     exec 'autocmd CursorHold,CursorMoved ' .
@@ -601,21 +598,12 @@ function! s:StartAutocmds()
   augroup END
 endfunction " }}}
 
-" s:StopAutocmds() {{{
-function! s:StopAutocmds()
-  augroup taglisttoo_file
-    autocmd!
-  augroup END
-endfunction " }}}
-
-" s:CloseTaglist() {{{
-function! s:CloseTaglist()
+function! s:CloseTaglist() " {{{
   close
   call s:Cleanup()
 endfunction " }}}
 
-" s:Cleanup() {{{
-function! s:Cleanup()
+function! s:Cleanup() " {{{
   augroup taglisttoo_file
     autocmd!
   augroup END
@@ -623,10 +611,11 @@ function! s:Cleanup()
   augroup taglisttoo
     autocmd!
   augroup END
+
+  " TODO: clear all b:taglisttoo_folds variables?
 endfunction " }}}
 
-" s:ProcessTags(on_open_or_write) {{{
-function! s:ProcessTags(on_open_or_write)
+function! s:ProcessTags(on_open_or_write) " {{{
   " on insert completion prevent vim's jumping back and forth from the
   " completion preview window from triggering a re-processing of tags
   if pumvisible()
@@ -738,8 +727,7 @@ function! s:ProcessTags(on_open_or_write)
   call s:ShowCurrentTag()
 endfunction " }}}
 
-" s:Parse(filename, settings) {{{
-function! s:Parse(filename, settings)
+function! s:Parse(filename, settings) " {{{
 python << PYTHONEOF
 settings = vim.eval('a:settings')
 filename = vim.eval('a:filename')
@@ -790,8 +778,7 @@ PYTHONEOF
   return parsed_results
 endfunction " }}}
 
-" s:FormatDefault(types, tags) {{{
-function! s:FormatDefault(types, tags)
+function! s:FormatDefault(types, tags) " {{{
   let formatter = taglisttoo#util#Formatter(a:tags)
   call formatter.filename()
 
@@ -806,13 +793,11 @@ function! s:FormatDefault(types, tags)
   return formatter
 endfunction " }}}
 
-" s:FormatEmpty(types, tags) {{{
-function! s:FormatEmpty(types, tags)
+function! s:FormatEmpty(types, tags) " {{{
   return taglisttoo#util#Formatter(a:tags)
 endfunction " }}}
 
-" s:GetTagInfo() {{{
-function! s:GetTagInfo()
+function! s:GetTagInfo() " {{{
   if line('.') > len(b:taglisttoo_content[0])
     return []
   endif
@@ -825,15 +810,13 @@ function! s:GetTagInfo()
   return b:taglisttoo_tags[index]
 endfunction " }}}
 
-" s:EchoError(message) {{{
-function! s:EchoError(message)
+function! s:EchoError(message) " {{{
   echohl Error
   echo a:message
   echohl Normal
 endfunction " }}}
 
-" s:EchoTag() {{{
-function! s:EchoTag()
+function! s:EchoTag() " {{{
   if g:TaglistTooTagEcho
     let tag_info = s:GetTagInfo()
     if len(tag_info)
@@ -844,8 +827,124 @@ function! s:EchoTag()
   endif
 endfunction " }}}
 
-" s:JumpToTag() {{{
-function! s:JumpToTag()
+function! s:FoldLevel(lnum) " {{{
+  let indent = indent(a:lnum)
+  let next_line = nextnonblank(a:lnum + 1)
+  if next_line
+    let next_indent = indent(next_line)
+    if next_indent > indent
+      let indent = next_indent
+    endif
+  endif
+  let level = indent / &shiftwidth
+  return level
+endfunction " }}}
+
+function! s:FoldClose() " {{{
+  silent! foldclose
+  let line = foldclosed('.')
+  if line != -1
+    let folds = s:GetFolds()
+    let path = s:GetFoldPath(line)
+    if len(path)
+      call add(folds, path)
+      call setbufvar(b:taglisttoo_file_bufnr, 'taglisttoo_folds', folds)
+    endif
+  endif
+endfunction " }}}
+
+function! s:FoldOpen() " {{{
+  let line = foldclosed('.')
+  if line != -1
+    let folds = s:GetFolds()
+    let path = s:GetFoldPath(line)
+    let index = index(folds, path)
+    if index != -1
+      call remove(folds, index)
+      call setbufvar(b:taglisttoo_file_bufnr, 'taglisttoo_folds', folds)
+    endif
+  endif
+  silent! foldopen
+endfunction " }}}
+
+function! s:FoldOpenAll() " {{{
+  call setbufvar(b:taglisttoo_file_bufnr, 'taglisttoo_folds', [])
+  setlocal foldlevel=99
+endfunction " }}}
+
+function! s:FoldToggle() " {{{
+  if foldclosed('.') != -1
+    call s:FoldOpen()
+  else
+    call s:FoldClose()
+  endif
+endfunction " }}}
+
+function! s:FoldPath(path) " {{{
+  call cursor(1, 1)
+
+  let fold = 1
+  let index = 0
+  while index < len(a:path)
+    let fold = search('^\s*' . a:path[index] . '\s*$', 'cW')
+    if !fold
+      let folds = s:GetFolds()
+      let index = index(folds, a:path)
+      if index != -1
+        call remove(folds, index)
+        call setbufvar(b:taglisttoo_file_bufnr, 'taglisttoo_folds', folds)
+      endif
+      break
+    endif
+
+    " make sure we didn't hit a tag that looks like a label
+    let line = getline('.')
+    let col = len(line) - len(substitute(line, '^\s*', '', '')) + 1
+    let syntax = synIDattr(synID(fold, col, 1), 'name')
+    if syntax != 'TagListKeyword'
+      call cursor(line('.') + 1, 1)
+      continue
+    endif
+
+    let index += 1
+  endwhile
+
+  if fold
+    foldclose
+  endif
+endfunction " }}}
+
+function! s:GetFolds() " {{{
+  let folds = getbufvar(b:taglisttoo_file_bufnr, 'taglisttoo_folds')
+  if type(folds) != 3 " not a list
+    unlet folds | let folds = []
+  endif
+  return folds
+endfunction " }}}
+
+function! s:GetFoldPath(lnum) " {{{
+  let path = []
+
+  let lnum = a:lnum
+  let indent = indent(lnum)
+  while lnum >= 1
+    let line = getline(lnum)
+    let col = len(line) - len(substitute(line, '^\s*', '', '')) + 1
+    let syntax = synIDattr(synID(lnum, col, 1), 'name')
+    if syntax == 'TagListKeyword' && (lnum == a:lnum || indent(lnum) < indent)
+      call insert(path, substitute(line, '\(^\s*\|\s*$\)', '', 'g'))
+    endif
+    let indent = indent(lnum)
+    if indent == 0
+      break
+    endif
+    let lnum -= 1
+  endwhile
+
+  return path
+endfunction " }}}
+
+function! s:JumpToTag() " {{{
   let tag_info = s:GetTagInfo()
   if !len(tag_info)
     return
@@ -909,9 +1008,9 @@ function! s:JumpToTag()
   endif
 endfunction " }}}
 
-" s:Window(settings, tags) {{{
-function! s:Window(settings, tags)
+function! s:Window(settings, tags) " {{{
   let file_bufnr = bufnr('%')
+  let folds = exists('b:taglisttoo_folds') ? b:taglisttoo_folds : []
 
   let buffers = {}
   for bufnum in tabpagebuflist()
@@ -937,14 +1036,12 @@ function! s:Window(settings, tags)
     let winnum = winnr()
 
     setlocal filetype=taglist
-    setlocal buftype=nofile
-    setlocal bufhidden=delete
-    setlocal noswapfile
-    setlocal nobuflisted
-    setlocal nowrap
-    setlocal tabstop=2
+    setlocal buftype=nofile bufhidden=delete
+    setlocal noswapfile nobuflisted
+    setlocal expandtab shiftwidth=2 tabstop=2
     setlocal winfixwidth
-    setlocal nonumber
+    setlocal nowrap nonumber
+    setlocal foldmethod=expr foldexpr=s:FoldLevel(v:lnum) foldlevel=99
 
     syn match TagListFileName "^.*\%1l.*"
     hi link TagListFileName Identifier
@@ -952,6 +1049,23 @@ function! s:Window(settings, tags)
     hi TagListCurrentTag term=bold,underline cterm=bold,underline gui=bold,underline
 
     nnoremap <silent> <buffer> <cr> :call <SID>JumpToTag()<cr>
+
+    " folding related mappings
+    nnoremap <silent> <buffer> za :call <SID>FoldToggle()<cr>
+    nnoremap <silent> <buffer> zA :call <SID>FoldToggle()<cr>
+    nnoremap <silent> <buffer> zc :call <SID>FoldClose()<cr>
+    nnoremap <silent> <buffer> zC :call <SID>FoldClose()<cr>
+    nnoremap <silent> <buffer> zo :call <SID>FoldOpen()<cr>
+    nnoremap <silent> <buffer> zO :call <SID>FoldOpen()<cr>
+    nnoremap <silent> <buffer> zn :call <SID>FoldOpenAll()<cr>
+    nnoremap <silent> <buffer> zR :call <SID>FoldOpenAll()<cr>
+    nnoremap <silent> <buffer> zx <Nop>
+    nnoremap <silent> <buffer> zX <Nop>
+    nnoremap <silent> <buffer> zm <Nop>
+    nnoremap <silent> <buffer> zM <Nop>
+    nnoremap <silent> <buffer> zN <Nop>
+    nnoremap <silent> <buffer> zr <Nop>
+    nnoremap <silent> <buffer> zi <Nop>
 
     noautocmd wincmd p
     " handle hopefully rare case where the previous window is not the file's
@@ -995,11 +1109,15 @@ function! s:Window(settings, tags)
 
   setlocal modifiable
   silent 1,$delete _
-  for line in content
-    call append('$', substitute(line, "\t", '  ', 'g'))
-  endfor
+  call append(1, content)
+  silent retab
   silent 1,1delete _
   setlocal nomodifiable
+
+  " restore any saved folds
+  for path in folds
+    call s:FoldPath(path)
+  endfor
 
   call setpos('.', pos)
 
@@ -1015,8 +1133,7 @@ function! s:Window(settings, tags)
   let b:taglisttoo_file_bufnr = file_bufnr
 endfunction " }}}
 
-" s:ShowCurrentTag() {{{
-function! s:ShowCurrentTag()
+function! s:ShowCurrentTag() " {{{
   if s:FileSupported(expand('%:p'), &ft) && bufwinnr(s:taglisttoo_title_escaped) != -1
     let tags = getbufvar(s:taglisttoo_title_escaped, 'taglisttoo_tags')
     let content = getbufvar(s:taglisttoo_title_escaped, 'taglisttoo_content')
@@ -1056,9 +1173,7 @@ function! s:ShowCurrentTag()
   endif
 endfunction " }}}
 
-" s:FileSupported(filename, ftype) {{{
-" Check whether tag listing is supported for the specified file
-function! s:FileSupported(filename, ftype)
+function! s:FileSupported(filename, ftype) " {{{
   " Skip buffers with no names, buffers with filetype not set, and vimballs
   if a:filename == '' || a:ftype == '' || expand('%:e') == 'vba'
     return 0
@@ -1086,8 +1201,7 @@ function! s:FileSupported(filename, ftype)
   return 1
 endfunction " }}}
 
-" s:CloseIfLastWindow() {{{
-function! s:CloseIfLastWindow()
+function! s:CloseIfLastWindow() " {{{
   if histget(':', -1) !~ '^bd'
     let numtoolwindows = 0
     if winnr('$') == 1
