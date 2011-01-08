@@ -77,9 +77,9 @@ the taglist window.
 Within the taglist window you can jump to a particular tag in the source file
 by hitting <Enter> on the tag.
 
-The taglist also supports folding within the taglist window using a subset of
-vim's standard folding key bindings (Note: unlike the standard key bindings,
-none of these are recursive):
+Folding of tags by heading is also supported using a subset of vim's standard
+folding key bindings (Note: unlike the standard key bindings, none of these
+are recursive):
 
     za, zA   When on a fold, toggle whether it is open or closed.
     zc, zC   Close a fold.
