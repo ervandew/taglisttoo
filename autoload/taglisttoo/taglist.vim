@@ -753,6 +753,7 @@ PYTHONEOF
     call remove(results, 0)
   endwhile
 
+  let types = keys(a:settings.tags)
   let parsed_results = []
   for result in results
     let pre = substitute(result, '\(.\{-}\)\t\/\^.*', '\1', '')
@@ -766,13 +767,17 @@ PYTHONEOF
     let pattern = substitute(pattern, '^/\(.*\)/;"$', '\1', '')
     let parent = len(parts) > 2 ? parts[2] : ''
 
-    call add(parsed_results, {
-        \ 'type': type,
-        \ 'name': name,
-        \ 'pattern': pattern,
-        \ 'line': line,
-        \ 'parent': parent,
-      \ })
+    " ctags (mine at least) is not properly honoring --<lang>-kinds, so
+    " perform our own check here.
+    if index(types, type) != -1
+      call add(parsed_results, {
+          \ 'type': type,
+          \ 'name': name,
+          \ 'pattern': pattern,
+          \ 'line': line,
+          \ 'parent': parent,
+        \ })
+    endif
   endfor
 
   return parsed_results
