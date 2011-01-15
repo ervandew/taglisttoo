@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import os
 import re
 import subprocess
+import tempfile
 import vim
 
 def ctags(lang, types, filename):
@@ -66,6 +67,34 @@ def ctags(lang, types, filename):
   if retcode != 0:
     return (retcode, process.communicate()[1].strip())
   return (retcode, process.communicate()[0].strip())
+
+def jsctags(filename):
+  jsctags = vim.eval('g:Tlist_JSctags_Cmd')
+
+  startupinfo = None
+  if os.name == 'nt':
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+  temp = tempfile.mkstemp()[1]
+  try:
+    process = subprocess.Popen(
+        [
+          jsctags,
+          '-o', temp,
+          filename,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        startupinfo=startupinfo,
+    )
+
+    retcode = process.wait()
+    if retcode != 0:
+      return (retcode, process.communicate()[1].strip())
+    return (retcode, open(temp).read())
+  finally:
+    os.unlink(temp)
 
 def parse(filename, patterns):
   f = open(filename, 'r')

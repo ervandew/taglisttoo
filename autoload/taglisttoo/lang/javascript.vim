@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2010, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2011, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -35,8 +35,48 @@
 "   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 " }}}
 
-" Format(types, tags) {{{
-function! taglisttoo#lang#javascript#Format(types, tags)
+" Global Variabls {{{
+if !exists('g:TaglistTooJSctags')
+  let g:TaglistTooJSctags = 1
+endif
+" }}}
+
+function! taglisttoo#lang#javascript#Format(types, tags) " {{{
+  if !g:TaglistTooJSctags || !exists('g:Tlist_JSctags_Cmd')
+    return s:FormatRegexResults(a:types, a:tags)
+  endif
+  return s:FormatJSctagsResults(a:types, a:tags)
+endfunction " }}}
+
+function! s:FormatJSctagsResults(types, tags) " {{{
+  let formatter = taglisttoo#util#Formatter(a:tags)
+  call formatter.filename()
+
+  let functions = filter(copy(a:tags), 'v:val.type == "f" && v:val.namespace == ""')
+  if len(functions) > 0
+    call formatter.blank()
+    call formatter.format(a:types['f'], functions, '')
+  endif
+
+  let members = filter(copy(a:tags), 'v:val.name == "includeScript"')
+
+  let objects = filter(copy(a:tags), 'v:val.jstype == "Object"')
+  for object in objects
+    if object.namespace != ''
+      let object.name = object.namespace . '.' . object.name
+    endif
+
+    call formatter.blank()
+    call formatter.heading(a:types['o'], object, '')
+
+    let members = filter(copy(a:tags), 'v:val.type == "f" && v:val.namespace == object.name')
+    call formatter.format(a:types['f'], members, "\t")
+  endfor
+
+  return formatter
+endfunction " }}}
+
+function! s:FormatRegexResults(types, tags) " {{{
   let pos = getpos('.')
 
   let formatter = taglisttoo#util#Formatter(a:tags)
@@ -131,8 +171,75 @@ function! taglisttoo#lang#javascript#Format(types, tags)
   return formatter
 endfunction " }}}
 
-" Parse(file, settings) {{{
-function! taglisttoo#lang#javascript#Parse(file, settings)
+function! taglisttoo#lang#javascript#Parse(file, settings) " {{{
+  if g:TaglistTooJSctags && !exists('g:Tlist_JSctags_Cmd')
+    if executable('jsctags')
+      let g:Tlist_JSctags_Cmd = 'jsctags'
+    elseif executable('javascripttags')
+      let g:Tlist_JSctags_Cmd = 'javascripttags'
+    endif
+  endif
+
+  if !g:TaglistTooJSctags || !exists('g:Tlist_JSctags_Cmd')
+    return s:ParseRegex(a:file, a:settings)
+  endif
+  return s:ParseJSctags(a:file, a:settings)
+endfunction " }}}
+
+function! s:ParseJSctags(file, settings) " {{{
+python << PYTHONEOF
+retcode, result = taglisttoo.jsctags(vim.eval('a:file'))
+vim.command('let retcode = %i' % retcode)
+vim.command("let result = '%s'" % result.replace("'", "''"))
+PYTHONEOF
+
+  if retcode
+    call s:EchoError('jsctags failed with error code: ' . retcode)
+    return
+  endif
+
+  if has('win32') || has('win64') || has('win32unix')
+    let result = substitute(result, "\<c-m>\n", '\n', 'g')
+  endif
+
+  let results = split(result, '\n')
+  while len(results) && results[0] =~ '^!_'
+    call remove(results, 0)
+  endwhile
+
+  let types = keys(a:settings.tags)
+  let parsed_results = []
+  for result in results
+    let pre = substitute(result, '\(.\{-}\)\t\/\^.*', '\1', '')
+    let pattern = substitute(result, '.\{-}\(\/\^.*\/;"\).*', '\1', '')
+    let post = substitute(result, '.\{-}\/\^.*\/;"\t', '', '')
+
+    let [name, filename] = split(pre, '\t')
+    let parts = split(post, '\t')
+    let [type, line_str] = parts[:1]
+    exec 'let line = ' . substitute(line_str, 'lineno:', '', '')
+    let pattern = substitute(pattern, '^/\(.*\)/;"$', '\1', '')
+
+    let jstypes = filter(copy(parts), 'v:val =~ "^type:"')
+    let namespaces = filter(copy(parts), 'v:val =~ "^namespace:"')
+
+    let jstype = len(jstypes) ? substitute(jstypes[0], '^type:', '', '') : ''
+    let ns = len(namespaces) ? substitute(namespaces[0], '^namespace:', '', '') : ''
+
+    call add(parsed_results, {
+        \ 'type': type,
+        \ 'name': name,
+        \ 'pattern': pattern,
+        \ 'line': line,
+        \ 'namespace': ns,
+        \ 'jstype': jstype,
+      \ })
+  endfor
+
+  return parsed_results
+endfunction " }}}
+
+function! s:ParseRegex(file, settings) " {{{
   let patterns = []
   " Match Objects/Classes
   call add(patterns, ['o', '([A-Za-z0-9_.]+)\s*=\s*\{(\s*[^}]|$)', 1])
@@ -161,21 +268,18 @@ function! taglisttoo#lang#javascript#Parse(file, settings)
   return taglisttoo#util#Parse(a:file, patterns)
 endfunction " }}}
 
-" s:ObjectComparator(o1, o2) {{{
-function s:ObjectComparator(o1, o2)
+function s:ObjectComparator(o1, o2) " {{{
   let n1 = a:o1['object'].name
   let n2 = a:o2['object'].name
   return n1 == n2 ? 0 : n1 > n2 ? 1 : -1
 endfunction " }}}
 
-" s:SkipComments() {{{
-function s:SkipComments()
+function s:SkipComments() " {{{
   let synname = synIDattr(synID(line('.'), col('.'), 1), "name")
   return synname =~? '\(comment\|string\)'
 endfunction " }}}
 
-" s:GetParentObject(objects, bounds, start, end) {{{
-function s:GetParentObject(objects, bounds, start, end)
+function s:GetParentObject(objects, bounds, start, end) " {{{
   for key in keys(a:bounds)
     let range = a:bounds[key]
     if range[0] < a:start && range[1] > a:end
