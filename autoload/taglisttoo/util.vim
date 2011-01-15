@@ -107,7 +107,9 @@ return result
 endfunction " }}}
 
 function! taglisttoo#util#SortTags(tag1, tag2) " {{{
-  return a:tag1.name == a:tag2.name ? 0 : a:tag1.name > a:tag2.name ? 1 : -1
+  let name1 = tolower(a:tag1.name)
+  let name2 = tolower(a:tag2.name)
+  return name1 == name2 ? 0 : name1 > name2 ? 1 : -1
 endfunction " }}}
 
 " vim:ft=vim:fdm=marker
