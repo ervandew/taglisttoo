@@ -638,7 +638,6 @@ function! s:ProcessTags(on_open_or_write) " {{{
   endif
   let filewin = winnr()
 
-  let tags = []
   if s:FileSupported(expand('%:p'), &ft)
     if exists('g:tlist_{&ft}_settings')
       if type(g:tlist_{&ft}_settings) == 1
@@ -674,9 +673,9 @@ function! s:ProcessTags(on_open_or_write) " {{{
 
     try
       if has_key(settings, 'parse')
-        let results = function(settings.parse)(file, settings)
+        let tags = function(settings.parse)(file, settings)
       else
-        let results = s:Parse(file, settings)
+        let tags = s:Parse(file, settings)
       endif
     finally
       if tempfile != ''
@@ -684,23 +683,8 @@ function! s:ProcessTags(on_open_or_write) " {{{
       endif
     endtry
 
-    if type(results) != 3
+    if type(tags) != 3
       return
-    endif
-
-    if len(results)
-      for result in results
-        " filter false positives found in comments or strings
-        let lnum = result.line
-        let line = getline(lnum)
-        let col = len(line) - len(substitute(line, '^\s*', '', '')) + 1
-        if synIDattr(synID(lnum, col, 1), 'name') =~? '\(comment\|string\)' ||
-         \ synIDattr(synIDtrans(synID(lnum, col, 1)), 'name') =~? '\(comment\|string\)'
-          continue
-        endif
-
-        call add(tags, result)
-      endfor
     endif
 
     call s:Window(settings, tags)

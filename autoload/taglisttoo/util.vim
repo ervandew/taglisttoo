@@ -100,10 +100,26 @@ python << PYTHONEOF
 filename = vim.eval('a:file')
 patterns = vim.eval('a:patterns')
 result = taglisttoo.parse(filename, patterns)
-vim.command('let result = %s' % ('%r' % result).replace("\\'", "''"))
+vim.command('let results = %s' % ('%r' % result).replace("\\'", "''"))
 PYTHONEOF
 
-return result
+  let tags = []
+  if len(results)
+    for result in results
+      " filter false positives found in comments or strings
+      let lnum = result.line
+      let line = getline(lnum)
+      let col = len(line) - len(substitute(line, '^\s*', '', '')) + 1
+      if synIDattr(synID(lnum, col, 1), 'name') =~? '\(comment\|string\)' ||
+       \ synIDattr(synIDtrans(synID(lnum, col, 1)), 'name') =~? '\(comment\|string\)'
+        continue
+      endif
+
+      call add(tags, result)
+    endfor
+  endif
+
+  return tags
 endfunction " }}}
 
 function! taglisttoo#util#SortTags(tag1, tag2) " {{{
