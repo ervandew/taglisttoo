@@ -1046,7 +1046,8 @@ function! s:Window(settings, tags) " {{{
     setlocal expandtab shiftwidth=2 tabstop=2
     setlocal winfixwidth
     setlocal nowrap nonumber
-    setlocal foldmethod=expr foldexpr=s:FoldLevel(v:lnum) foldlevel=99
+    setlocal foldmethod=expr foldlevel=99
+    setlocal foldexpr=s:FoldLevel(v:lnum) foldtext=getline(v:foldstart)
 
     syn match TagListFileName "^.*\%1l.*"
     hi link TagListFileName Identifier
