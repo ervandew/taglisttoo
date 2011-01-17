@@ -703,7 +703,7 @@ function! s:ProcessTags(on_open_or_write) " {{{
     " isn't open already.
     let winnum = bufwinnr(s:taglisttoo_title_escaped)
     if winnum != -1
-      call s:Window({'tags': {}}, tags)
+      call s:Window({'tags': {}}, [])
       winc p
     endif
   endif
