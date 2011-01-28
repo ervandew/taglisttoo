@@ -1,5 +1,5 @@
 """
-Copyright (c) 2005 - 2010, Eric Van Dewoestine
+Copyright (c) 2005 - 2011, Eric Van Dewoestine
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms, with
@@ -46,27 +46,37 @@ def ctags(lang, types, filename):
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
-  process = subprocess.Popen(
-      [
-        ctags,
-        '-f', '-',
-        '--format=2',
-        '--excmd=pattern',
-        '--fields=nks',
-        '--sort=no',
-        '--language-force=%s' % lang,
-        '--%s-types=%s' % (lang, types),
-        filename,
-      ],
-      stdout=subprocess.PIPE,
-      stderr=subprocess.PIPE,
-      startupinfo=startupinfo,
-  )
+  stdoutfile = tempfile.TemporaryFile()
+  stderrfile = tempfile.TemporaryFile()
+  try:
+    process = subprocess.Popen(
+        [
+          ctags,
+          '-f', '-',
+          '--format=2',
+          '--excmd=pattern',
+          '--fields=nks',
+          '--sort=no',
+          '--language-force=%s' % lang,
+          '--%s-types=%s' % (lang, types),
+          filename,
+        ],
+        stdout=stdoutfile,
+        stderr=stderrfile,
+        startupinfo=startupinfo,
+    )
 
-  retcode = process.wait()
-  if retcode != 0:
-    return (retcode, process.communicate()[1].strip())
-  return (retcode, process.communicate()[0].strip())
+    retcode = process.wait()
+    if retcode != 0:
+      stderrfile.seek(0)
+      return (retcode, stderrfile.read())
+
+    stdoutfile.seek(0)
+    return (retcode, stdoutfile.read())
+
+  finally:
+    stdoutfile.close()
+    stderrfile.close()
 
 def jsctags(filename):
   jsctags = vim.eval('g:Tlist_JSctags_Cmd')
