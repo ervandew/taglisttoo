@@ -47,8 +47,6 @@ let g:TagListToo = 1
   let s:taglisttoo_prevwinnr = 0
 
   let s:taglisttoo_title = g:TagList_title
-  let s:taglisttoo_title_escaped =
-    \ substitute(s:taglisttoo_title, '\(.\{-}\)\[\(.\{-}\)\]\(.\{-}\)', '\1[[]\2[]]\3', 'g')
 " }}}
 
 " Language Settings {{{
@@ -509,7 +507,7 @@ function! taglisttoo#taglist#Taglist(...)
   let action = len(a:000) ? a:000[0] : -1
 
   if action == -1 || action == 0
-    let winnum = bufwinnr(s:taglisttoo_title_escaped)
+    let winnum = s:GetTagListWinnr()
     if winnum != -1
       let prevbuf = bufnr('%')
       exe winnum . 'wincmd w'
@@ -521,14 +519,6 @@ function! taglisttoo#taglist#Taglist(...)
 
   if action == -1 || action == 1
     call s:ProcessTags(1)
-    call s:StartAutocmds()
-
-    augroup taglisttoo
-      autocmd!
-      exec 'autocmd BufUnload ' .
-        \ escape(s:taglisttoo_title_escaped, ' ') . ' call s:Cleanup()'
-      autocmd CursorHold * call s:ShowCurrentTag()
-    augroup END
   endif
 endfunction " }}}
 
@@ -545,7 +535,7 @@ function! taglisttoo#taglist#Restore()
     autocmd!
   augroup END
 
-  let winnum = bufwinnr(s:taglisttoo_title_escaped)
+  let winnum = s:GetTagListWinnr()
   if winnum != -1
     TlistToo
     TlistToo
@@ -564,18 +554,24 @@ PYTHONEOF
 endfunction " }}}
 
 function! s:StartAutocmds() " {{{
+  augroup taglisttoo
+    autocmd! * <buffer>
+    autocmd! * *
+    autocmd BufUnload <buffer> call s:Cleanup()
+    autocmd CursorHold * call s:ShowCurrentTag()
+  augroup END
+
   augroup taglisttoo_file
-    autocmd!
-    exec 'autocmd CursorHold,CursorMoved ' .
-      \ escape(s:taglisttoo_title_escaped, ' ') . ' call s:EchoTag()'
-    exec 'autocmd BufEnter ' .
-      \ escape(s:taglisttoo_title_escaped, ' ') . '  nested call s:CloseIfLastWindow()'
+    autocmd! * <buffer>
+    autocmd! * *
+    autocmd CursorHold,CursorMoved <buffer> call s:EchoTag()
+    autocmd BufEnter <buffer> nested call s:CloseIfLastWindow()
     autocmd BufEnter *
-      \ if bufwinnr(s:taglisttoo_title_escaped) != -1 |
+      \ if s:GetTagListWinnr() != -1 |
       \   call s:ProcessTags(0) |
       \ endif
     autocmd BufWritePost *
-      \ if bufwinnr(s:taglisttoo_title_escaped) != -1 |
+      \ if s:GetTagListWinnr() != -1 |
       \   call s:ProcessTags(1) |
       \ endif
     " bit of a hack to re-process tags if the filetype changes after the tags
@@ -583,7 +579,7 @@ function! s:StartAutocmds() " {{{
     autocmd FileType *
       \ if exists('b:ft') |
       \   if b:ft != &ft |
-      \     if bufwinnr(s:taglisttoo_title_escaped) != -1 |
+      \     if s:GetTagListWinnr() != -1 |
       \       call s:ProcessTags(1) |
       \     endif |
       \     let b:ft = &ft |
@@ -592,7 +588,7 @@ function! s:StartAutocmds() " {{{
       \   let b:ft = &ft |
       \ endif
     autocmd WinLeave *
-      \ if bufwinnr(s:taglisttoo_title_escaped) != -1 && &buftype == '' |
+      \ if s:GetTagListWinnr() != -1 && &buftype == '' |
       \   let s:taglisttoo_prevwinnr = winnr() |
       \ endif
   augroup END
@@ -604,13 +600,16 @@ function! s:CloseTaglist() " {{{
 endfunction " }}}
 
 function! s:Cleanup() " {{{
-  augroup taglisttoo_file
-    autocmd!
-  augroup END
+  let bufnr = s:GetTagListBufnr()
+  if bufnr != -1
+    augroup taglisttoo_file
+      exec 'autocmd! * <buffer=' . bufnr . '>'
+    augroup END
 
-  augroup taglisttoo
-    autocmd!
-  augroup END
+    augroup taglisttoo
+      exec 'autocmd! * <buffer=' . bufnr . '>'
+    augroup END
+  endif
 
   " TODO: clear all b:taglisttoo_folds variables?
 endfunction " }}}
@@ -625,7 +624,7 @@ function! s:ProcessTags(on_open_or_write) " {{{
   " if we are entering a buffer whose taglist list is already loaded, then
   " don't do anything.
   if !a:on_open_or_write
-    let bufnr = bufnr(s:taglisttoo_title_escaped)
+    let bufnr = s:GetTagListBufnr()
     let filebuf = getbufvar(bufnr, 'taglisttoo_file_bufnr')
     if filebuf == bufnr('%')
       return
@@ -701,7 +700,7 @@ function! s:ProcessTags(on_open_or_write) " {{{
   else
     " if the file isn't supported, then don't open the taglist window if it
     " isn't open already.
-    let winnum = bufwinnr(s:taglisttoo_title_escaped)
+    let winnum = s:GetTagListWinnr()
     if winnum != -1
       call s:Window({'tags': {}}, [])
       winc p
@@ -1001,17 +1000,8 @@ function! s:Window(settings, tags) " {{{
   let file_bufnr = bufnr('%')
   let folds = exists('b:taglisttoo_folds') ? b:taglisttoo_folds : []
 
-  let buffers = {}
-  for bufnum in tabpagebuflist()
-    let name = bufname(bufnum)
-    if name != ''
-      let buffers[bufname(bufnum)] = bufnum
-    endif
-  endfor
-
-  if has_key(buffers, s:taglisttoo_title)
-    let winnum = bufwinnr(buffers[s:taglisttoo_title])
-  else
+  let winnum = s:GetTagListWinnr()
+  if winnum == -1
     if exists('g:VerticalToolWindowSide') &&
      \ g:VerticalToolWindowSide == g:TaglistTooPosition
       call eclim#display#window#VerticalToolWindowOpen(s:taglisttoo_title, 10, 1)
@@ -1056,6 +1046,8 @@ function! s:Window(settings, tags) " {{{
     nnoremap <silent> <buffer> zN <Nop>
     nnoremap <silent> <buffer> zr <Nop>
     nnoremap <silent> <buffer> zi <Nop>
+
+    call s:StartAutocmds()
 
     noautocmd wincmd p
     " handle hopefully rare case where the previous window is not the file's
@@ -1124,9 +1116,10 @@ function! s:Window(settings, tags) " {{{
 endfunction " }}}
 
 function! s:ShowCurrentTag() " {{{
-  if s:FileSupported(expand('%:p'), &ft) && bufwinnr(s:taglisttoo_title_escaped) != -1
-    let tags = getbufvar(s:taglisttoo_title_escaped, 'taglisttoo_tags')
-    let content = getbufvar(s:taglisttoo_title_escaped, 'taglisttoo_content')
+  if s:GetTagListWinnr() != -1 && s:FileSupported(expand('%:p'), &ft)
+    let bufnr = s:GetTagListBufnr()
+    let tags = getbufvar(bufnr, 'taglisttoo_tags')
+    let content = getbufvar(bufnr, 'taglisttoo_content')
 
     let clnum = line('.')
     let tlnum = 0
@@ -1146,7 +1139,7 @@ function! s:ShowCurrentTag() " {{{
 
     if exists('current')
       let cwinnum = winnr()
-      let twinnum = bufwinnr(s:taglisttoo_title_escaped)
+      let twinnum = s:GetTagListWinnr()
 
       exec 'noautocmd ' . twinnum . 'winc w'
 
@@ -1202,6 +1195,24 @@ function! s:CloseIfLastWindow() " {{{
       endif
     endif
   endif
+endfunction " }}}
+
+function! s:GetTagListBufnr() " {{{
+  let bufnrs = tabpagebuflist()
+  let bufnames = map(copy(bufnrs), 'bufname(v:val)')
+  let index = index(bufnames, s:taglisttoo_title)
+  if index != -1
+    return bufnrs[index]
+  endif
+  return -1
+endfunction " }}}
+
+function! s:GetTagListWinnr() " {{{
+  let bufnr = s:GetTagListBufnr()
+  if bufnr != -1
+    return bufwinnr(bufnr)
+  endif
+  return -1
 endfunction " }}}
 
 " vim:ft=vim:fdm=marker
