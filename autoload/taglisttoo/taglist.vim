@@ -621,6 +621,10 @@ function! s:ProcessTags(on_open_or_write) " {{{
     return
   endif
 
+  if winnr() == s:GetTagListWinnr()
+    return
+  endif
+
   " if we are entering a buffer whose taglist list is already loaded, then
   " don't do anything.
   if !a:on_open_or_write
@@ -1015,7 +1019,8 @@ function! s:Window(settings, tags) " {{{
         \ ' split ' . escape(s:taglisttoo_title, ' ')
     endif
 
-    let winnum = winnr()
+    let winnum = s:GetTagListWinnr()
+    exe winnum . 'wincmd w'
 
     setlocal filetype=taglist
     setlocal buftype=nofile bufhidden=delete
