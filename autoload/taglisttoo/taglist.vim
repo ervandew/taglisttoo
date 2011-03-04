@@ -672,10 +672,13 @@ function! s:ProcessTags(on_open_or_write) " {{{
 
     try
       if has_key(settings, 'parse')
-        let tags = function(settings.parse)(file, settings)
+        let tags = s:Function(settings.parse)(file, settings)
       else
         let tags = s:Parse(file, settings)
       endif
+    catch /E700/
+      call s:EchoError('Unknown function: ' . settings.parse)
+      return
     finally
       if tempfile != ''
         call delete(tempfile)
@@ -1073,7 +1076,12 @@ function! s:Window(settings, tags) " {{{
     let formatter = 's:FormatEmpty'
   endif
 
-  let format = function(formatter)(a:settings.tags, a:tags)
+  try
+    let format = s:Function(formatter)(a:settings.tags, a:tags)
+  catch /E700/
+    call s:EchoError('Unknown function: ' . formatter)
+    return
+  endtry
   let content = format.content
   exe winnum . 'wincmd w'
 
@@ -1119,6 +1127,9 @@ function! s:ShowCurrentTag() " {{{
   if s:GetTagListWinnr() != -1 && s:FileSupported(expand('%:p'), &ft)
     let bufnr = s:GetTagListBufnr()
     let tags = getbufvar(bufnr, 'taglisttoo_tags')
+    if type(tags) != 3 " something went wrong
+      return
+    endif
     let content = getbufvar(bufnr, 'taglisttoo_content')
 
     let clnum = line('.')
@@ -1213,6 +1224,14 @@ function! s:GetTagListWinnr() " {{{
     return bufwinnr(bufnr)
   endif
   return -1
+endfunction " }}}
+
+function! s:Function(name) " {{{
+  " not until somewhere betwee vim 7.2 and 7.3 did vim start automatically
+  " sourcing autoload files when attempting to get a funcref to an autoload
+  " function, so here is our own version.
+  exec 'runtime autoload/' . fnamemodify(substitute(a:name, '#', '/', 'g'), ':h') . '.vim'
+  return function(a:name)
 endfunction " }}}
 
 " vim:ft=vim:fdm=marker
