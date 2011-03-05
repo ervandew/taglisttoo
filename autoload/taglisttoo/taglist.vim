@@ -719,18 +719,24 @@ endfunction " }}}
 
 function! s:Parse(filename, settings) " {{{
 python << PYTHONEOF
-settings = vim.eval('a:settings')
-filename = vim.eval('a:filename')
-lang = settings['lang']
-types = ''.join(settings['tags'].keys())
+try:
+  settings = vim.eval('a:settings')
+  filename = vim.eval('a:filename')
+  lang = settings['lang']
+  types = ''.join(settings['tags'].keys())
 
-retcode, result = taglisttoo.ctags(lang, types, filename)
-vim.command('let retcode = %i' % retcode)
-vim.command("let result = '%s'" % result.replace("'", "''"))
+  retcode, result = taglisttoo.ctags(lang, types, filename)
+  vim.command('let retcode = %i' % retcode)
+  vim.command("let result = '%s'" % result.replace("'", "''"))
+except Exception as e:
+  vim.command("call s:EchoError('%s')" % str(e).replace("'", "''"))
+  vim.command('let retcode = -1')
 PYTHONEOF
 
   if retcode
-    call s:EchoError('taglist failed with error code: ' . retcode)
+    if retcode != -1
+      call s:EchoError('taglist failed with error code: ' . retcode)
+    endif
     return
   endif
 
