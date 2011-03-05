@@ -1232,11 +1232,15 @@ function! s:GetTagListWinnr() " {{{
 endfunction " }}}
 
 function! s:Function(name) " {{{
-  " not until somewhere betwee vim 7.2 and 7.3 did vim start automatically
-  " sourcing autoload files when attempting to get a funcref to an autoload
-  " function, so here is our own version.
-  exec 'runtime autoload/' . fnamemodify(substitute(a:name, '#', '/', 'g'), ':h') . '.vim'
-  return function(a:name)
+  try
+    return function(a:name)
+  catch /E700/
+    " not until somewhere betwee vim 7.2 and 7.3 did vim start automatically
+    " sourcing autoload files when attempting to get a funcref to an autoload
+    " function, so here is our own version.
+    exec 'runtime autoload/' . fnamemodify(substitute(a:name, '#', '/', 'g'), ':h') . '.vim'
+    return function(a:name)
+  endtry
 endfunction " }}}
 
 " vim:ft=vim:fdm=marker
