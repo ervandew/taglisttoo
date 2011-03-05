@@ -63,6 +63,7 @@ def ctags(lang, types, filename):
         ],
         stdout=stdoutfile,
         stderr=stderrfile,
+        stdin=subprocess.PIPE,
         startupinfo=startupinfo,
     )
 
