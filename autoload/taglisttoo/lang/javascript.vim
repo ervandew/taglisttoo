@@ -210,6 +210,12 @@ PYTHONEOF
   let types = keys(a:settings.tags)
   let parsed_results = []
   for result in results
+    " some results use <lnum>G;" (e.g. 1956G;") as the pattern... skip those
+    " for now since taglist expects actual patterns.
+    if result !~ '\t\/\^'
+      continue
+    endif
+
     let pre = substitute(result, '\(.\{-}\)\t\/\^.*', '\1', '')
     let pattern = substitute(result, '.\{-}\(\/\^.*\/;"\).*', '\1', '')
     let post = substitute(result, '.\{-}\/\^.*\/;"\t', '', '')
