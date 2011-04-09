@@ -162,8 +162,6 @@ def parse(filename, patterns):
       elif name in pattern:
         col = pattern.index(name) + 1
 
-      # escape slashes
-      pattern = pattern.replace('\\', '\\\\')
       # remove ctrl-Ms
       pattern = pattern.replace('\r', '')
 
