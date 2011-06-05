@@ -44,7 +44,10 @@ def ctags(lang, types, filename):
   startupinfo = None
   if os.name == 'nt':
     startupinfo = subprocess.STARTUPINFO()
-    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    if hasattr(subprocess, '_subprocess'):
+      startupinfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
+    else:
+      startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
   stdoutfile = tempfile.TemporaryFile()
   stderrfile = tempfile.TemporaryFile()
@@ -85,7 +88,10 @@ def jsctags(filename):
   startupinfo = None
   if os.name == 'nt':
     startupinfo = subprocess.STARTUPINFO()
-    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    if hasattr(subprocess, '_subprocess'):
+      startupinfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
+    else:
+      startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
   temp = tempfile.mkstemp()[1]
   try:
