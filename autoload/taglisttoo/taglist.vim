@@ -236,7 +236,6 @@ let s:tlist_htmljinja_settings = {
 " java language
 let s:tlist_java_settings = {
     \ 'lang': 'java',
-    \ 'format': 'taglisttoo#lang#java#Format',
     \ 'tags': {
       \ 'p': 'package',
       \ 'c': 'class',
@@ -317,7 +316,6 @@ let s:tlist_php_settings = {
 " python language
 let s:tlist_python_settings = {
     \ 'lang': 'python',
-    \ 'format': 'taglisttoo#lang#python#Format',
     \ 'tags': {
       \ 'c': 'class',
       \ 'm': 'function',

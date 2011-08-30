@@ -98,13 +98,15 @@ function! taglisttoo#util#Formatter(types, tags) " {{{
 
     if tag_type =~ s:class
       let name .= ' : ' . tag_type
-      if indent == ''
-        call self.blank()
-      endif
       " indent nested classes, but line up w/ preceding headings.
       if self.current_heading() != ''
         let indent = indent[:-2]
       endif
+      " separate top level classes with a blank line
+      if indent == ''
+        call self.blank()
+      endif
+      " push the current class heading onto the stack
       if len(self.headings)
         let self.headings[-1] = tag_type
       endif
