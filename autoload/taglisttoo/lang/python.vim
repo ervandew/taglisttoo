@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2010, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2011, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -37,27 +37,23 @@
 
 " Format(types, tags) {{{
 function! taglisttoo#lang#python#Format(types, tags)
-  let formatter = taglisttoo#util#Formatter(a:tags)
+  let formatter = taglisttoo#util#Formatter(a:types, a:tags)
   call formatter.filename()
 
-  let functions = filter(copy(a:tags), 'v:val.type == "f"')
+  let functions = filter(copy(a:tags), 'v:val.type == "f" && v:val.parent == ""')
   if len(functions)
     call formatter.blank()
-    call formatter.format(a:types['f'], functions, '')
+    call formatter.format(functions, '')
   endif
 
-  let classes = filter(copy(a:tags), 'v:val.type == "c"')
+  let classes = filter(copy(a:tags), 'v:val.type == "c" && v:val.parent == ""')
   if g:Tlist_Sort_Type == 'name'
-    call sort(classes, 'taglisttoo#util#SortTags')
+    call sort(classes, 'taglisttoo#util#SortTags', formatter)
   endif
 
   for class in classes
     call formatter.blank()
-    call formatter.heading(a:types['c'], class, '')
-
-    let members = filter(copy(a:tags),
-        \ 'v:val.type == "m" && v:val.parent == "class:" . class.name')
-    call formatter.format(a:types['m'], members, "\t")
+    call formatter.format(class, '')
   endfor
 
   return formatter

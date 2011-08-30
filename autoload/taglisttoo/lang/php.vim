@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2010, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2011, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -39,7 +39,7 @@
 function! taglisttoo#lang#php#Format(types, tags)
   let pos = getpos('.')
 
-  let formatter = taglisttoo#util#Formatter(a:tags)
+  let formatter = taglisttoo#util#Formatter(a:types, a:tags)
   call formatter.filename()
 
   let top_functions = filter(copy(a:tags), 'v:val.type == "f"')
@@ -47,7 +47,7 @@ function! taglisttoo#lang#php#Format(types, tags)
   let class_contents = []
   let classes = filter(copy(a:tags), 'v:val.type == "c"')
   if g:Tlist_Sort_Type == 'name'
-    call sort(classes, 'taglisttoo#util#SortTags')
+    call sort(classes, 'taglisttoo#util#SortTags', formatter)
   endif
   for class in classes
     let object_start = class.line
@@ -79,7 +79,7 @@ function! taglisttoo#lang#php#Format(types, tags)
   let interface_contents = []
   let interfaces = filter(copy(a:tags), 'v:val.type == "i"')
   if g:Tlist_Sort_Type == 'name'
-    call sort(interfaces, 'taglisttoo#util#SortTags')
+    call sort(interfaces, 'taglisttoo#util#SortTags', formatter)
   endif
   for interface in interfaces
     let object_start = interface.line
@@ -110,19 +110,19 @@ function! taglisttoo#lang#php#Format(types, tags)
 
   if len(top_functions) > 0
     call formatter.blank()
-    call formatter.format(a:types['f'], top_functions, '')
+    call formatter.format(top_functions, '')
   endif
 
   for class_content in class_contents
     call formatter.blank()
-    call formatter.heading(a:types['c'], class_content.class, '')
-    call formatter.format(a:types['f'], class_content.functions, "\t")
+    call formatter.format(class_content.class, '')
+    call formatter.format(class_content.functions, "\t")
   endfor
 
   for interface_content in interface_contents
     call formatter.blank()
-    call formatter.heading(a:types['i'], interface_content.interface, '')
-    call formatter.format(a:types['f'], interface_content.functions, "\t")
+    call formatter.format(interface_content.interface, '')
+    call formatter.format(interface_content.functions, "\t")
   endfor
 
   call setpos('.', pos)

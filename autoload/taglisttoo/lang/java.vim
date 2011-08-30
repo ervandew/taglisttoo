@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2010, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2011, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -37,52 +37,29 @@
 
 " Format(types, tags) {{{
 function! taglisttoo#lang#java#Format(types, tags)
-  let formatter = taglisttoo#util#Formatter(a:tags)
+  let formatter = taglisttoo#util#Formatter(a:types, a:tags)
   call formatter.filename()
 
   let package = filter(copy(a:tags), 'v:val.type == "p"')
-  call formatter.format(a:types['p'], package, '')
+  if len(package)
+    call formatter.format(package[0], '')
+  endif
 
   let classes = filter(copy(a:tags), 'v:val.type == "c"')
-
-  " sort classes alphabetically except for the primary containing class.
-  if len(classes) > 1 && g:Tlist_Sort_Type == 'name'
-    let classes = [classes[0]] + sort(classes[1:], 'taglisttoo#util#SortTags')
-  endif
-
-  for class in classes
-    call formatter.blank()
-
-    let visibility = taglisttoo#util#GetVisibility(class)
-    call formatter.heading(a:types['c'], class, '')
-
-    let fields = filter(copy(a:tags),
-      \ 'v:val.type == "f" && v:val.parent =~ "class:.*\\<" . class.name . "$"')
-    call formatter.format(a:types['f'], fields, "\t")
-
-    let methods = filter(copy(a:tags),
-      \ 'v:val.type == "m" && v:val.parent =~ "class:.*\\<" . class.name . "$"')
-    call formatter.format(a:types['m'], methods, "\t")
-  endfor
-
   let interfaces = filter(copy(a:tags), 'v:val.type == "i"')
-  if g:Tlist_Sort_Type == 'name'
-    call sort(interfaces, 'taglisttoo#util#SortTags')
+
+  call formatter.blank()
+  if len(classes) && len(interfaces)
+    if classes[0].line < interfaces[0].line
+      call formatter.format(classes[0], '')
+    else
+      call formatter.format(interfaces[0], '')
+    endif
+  elseif len(classes)
+    call formatter.format(classes[0], '')
+  elseif len(interfaces)
+    call formatter.format(interfaces[0], '')
   endif
-  for interface in interfaces
-    call formatter.blank()
-
-    let visibility = taglisttoo#util#GetVisibility(interface)
-    call formatter.heading(a:types['i'], interface, '')
-
-    let fields = filter(copy(a:tags),
-      \ 'v:val.type == "f" && v:val.parent =~ "interface:.*\\<" . interface.name . "$"')
-    call formatter.format(a:types['f'], fields, "\t")
-
-    let methods = filter(copy(a:tags),
-      \ 'v:val.type == "m" && v:val.parent =~ "interface:.*\\<" . interface.name . "$"')
-    call formatter.format(a:types['m'], methods, "\t")
-  endfor
 
   return formatter
 endfunction " }}}

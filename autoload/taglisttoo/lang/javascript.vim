@@ -49,13 +49,13 @@ function! taglisttoo#lang#javascript#Format(types, tags) " {{{
 endfunction " }}}
 
 function! s:FormatJSctagsResults(types, tags) " {{{
-  let formatter = taglisttoo#util#Formatter(a:tags)
+  let formatter = taglisttoo#util#Formatter(a:types, a:tags)
   call formatter.filename()
 
   let functions = filter(copy(a:tags), 'v:val.type == "f" && v:val.namespace == ""')
   if len(functions) > 0
     call formatter.blank()
-    call formatter.format(a:types['f'], functions, '')
+    call formatter.format(functions, '')
   endif
 
   let members = filter(copy(a:tags), 'v:val.name == "includeScript"')
@@ -67,10 +67,10 @@ function! s:FormatJSctagsResults(types, tags) " {{{
     endif
 
     call formatter.blank()
-    call formatter.heading(a:types['o'], object, '')
+    call formatter.format(object, '')
 
     let members = filter(copy(a:tags), 'v:val.type == "f" && v:val.namespace == object.name')
-    call formatter.format(a:types['f'], members, "\t")
+    call formatter.format(members, "\t")
   endfor
 
   return formatter
@@ -79,7 +79,7 @@ endfunction " }}}
 function! s:FormatRegexResults(types, tags) " {{{
   let pos = getpos('.')
 
-  let formatter = taglisttoo#util#Formatter(a:tags)
+  let formatter = taglisttoo#util#Formatter(a:types, a:tags)
   call formatter.filename()
 
   let object_contents = []
@@ -153,7 +153,7 @@ function! s:FormatRegexResults(types, tags) " {{{
 
   if len(functions) > 0
     call formatter.blank()
-    call formatter.format(a:types['f'], functions, '')
+    call formatter.format(functions, '')
   endif
 
   if g:Tlist_Sort_Type == 'name'
@@ -162,8 +162,8 @@ function! s:FormatRegexResults(types, tags) " {{{
 
   for object_content in object_contents
     call formatter.blank()
-    call formatter.heading(a:types['o'], object_content.object, '')
-    call formatter.format(a:types['f'], object_content.methods, "\t")
+    call formatter.format(object_content.object, '')
+    call formatter.format(object_content.methods, "\t")
   endfor
 
   call setpos('.', pos)

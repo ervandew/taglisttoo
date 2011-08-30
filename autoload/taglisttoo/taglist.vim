@@ -320,7 +320,7 @@ let s:tlist_python_settings = {
     \ 'format': 'taglisttoo#lang#python#Format',
     \ 'tags': {
       \ 'c': 'class',
-      \ 'm': 'member',
+      \ 'm': 'function',
       \ 'f': 'function'
     \ }
   \ }
@@ -338,9 +338,9 @@ let s:tlist_rst_settings = {
 let s:tlist_ruby_settings = {
     \ 'lang': 'ruby', 'tags': {
       \ 'c': 'class',
-      \ 'f': 'method',
-      \ 'F': 'function',
-      \ 'm': 'singleton method'
+      \ 'm': 'class',
+      \ 'f': 'function',
+      \ 'F': 'singleton method'
     \ }
   \ }
 
@@ -780,32 +780,33 @@ PYTHONEOF
 endfunction " }}}
 
 function! s:FormatDefault(types, tags) " {{{
-  let formatter = taglisttoo#util#Formatter(a:tags)
+  let formatter = taglisttoo#util#Formatter(a:types, a:tags)
   call formatter.filename()
 
   for key in keys(a:types)
-    let values = filter(copy(a:tags), 'v:val.type == key')
+    let values = filter(copy(a:tags),
+      \ 'v:val.type == key && get(v:val, "parent", "") == ""')
     if len(values)
       call formatter.blank()
+      call formatter.format(values, "")
     endif
-    call formatter.format(a:types[key], values, "")
   endfor
 
   return formatter
 endfunction " }}}
 
 function! s:FormatEmpty(types, tags) " {{{
-  return taglisttoo#util#Formatter(a:tags)
+  return taglisttoo#util#Formatter(a:types, a:tags)
 endfunction " }}}
 
 function! s:GetTagInfo() " {{{
   if line('.') > len(b:taglisttoo_content[0])
-    return []
+    return {}
   endif
 
   let index = b:taglisttoo_content[0][line('.') - 1]
-  if index == -1
-    return []
+  if index == -1 || index == 'label'
+    return {}
   endif
 
   return b:taglisttoo_tags[index]
@@ -829,16 +830,26 @@ function! s:EchoTag() " {{{
 endfunction " }}}
 
 function! s:FoldLevel(lnum) " {{{
-  let indent = indent(a:lnum)
-  let next_line = nextnonblank(a:lnum + 1)
-  if next_line
-    let next_indent = indent(next_line)
-    if next_indent > indent
-      let indent = next_indent
+  if !exists('b:taglisttoo_content')
+    return -1
+  endif
+
+  let index = b:taglisttoo_content[0][a:lnum - 1]
+  if index == -1
+    return 0
+  endif
+
+  let lnum = a:lnum
+  let indent = indent(lnum)
+  let level = (indent / &shiftwidth) + 1
+  if lnum != line('$')
+    if indent < indent(lnum + 1)
+      return '>' . level
+    elseif lnum != 1 && indent > indent(lnum + 1)
+      return '<' . ((indent(lnum - 1) / &shiftwidth) + 1)
     endif
   endif
-  let level = indent / &shiftwidth
-  return level
+  return '='
 endfunction " }}}
 
 function! s:FoldClose() " {{{
@@ -900,8 +911,7 @@ function! s:FoldPath(path) " {{{
 
     " make sure we didn't hit a tag that looks like a label
     let line = getline('.')
-    let col = len(line) - len(substitute(line, '^\s*', '', '')) + 1
-    let syntax = synIDattr(synID(fold, col, 1), 'name')
+    let syntax = synIDattr(synID(fold, len(line), 1), 'name')
     if syntax != 'TagListKeyword'
       call cursor(line('.') + 1, 1)
       continue
@@ -930,8 +940,7 @@ function! s:GetFoldPath(lnum) " {{{
   let indent = indent(lnum)
   while lnum >= 1
     let line = getline(lnum)
-    let col = len(line) - len(substitute(line, '^\s*', '', '')) + 1
-    let syntax = synIDattr(synID(lnum, col, 1), 'name')
+    let syntax = synIDattr(synID(lnum, len(line), 1), 'name')
     if syntax == 'TagListKeyword' && (lnum == a:lnum || indent(lnum) < indent)
       call insert(path, substitute(line, '\(^\s*\|\s*$\)', '', 'g'))
     endif
@@ -1035,16 +1044,26 @@ function! s:Window(settings, tags) " {{{
     setlocal winfixwidth
     setlocal nowrap nonumber
     setlocal foldmethod=expr foldlevel=99
-    setlocal foldexpr=s:FoldLevel(v:lnum) foldtext=getline(v:foldstart)
 
     syn match TagListFileName "^.*\%1l.*"
     hi link TagListFileName Identifier
     hi link TagListKeyword Statement
     hi TagListCurrentTag term=bold,underline cterm=bold,underline gui=bold,underline
+    hi TagListVisibilityPublic    ctermfg=green   guifg=SeaGreen
+    hi TagListVisibilityPrivate   ctermfg=red     guifg=Red
+    hi TagListVisibilityProtected ctermfg=blue    guifg=Blue
+    hi TagListVisibilityStatic    ctermfg=magenta guifg=Magenta
+    if has('gui') && &background == 'dark'
+      hi TagListVisibilityPublic    guifg=#8eb157
+      hi TagListVisibilityPrivate   guifg=#cf6171
+      hi TagListVisibilityProtected guifg=#6699cc
+      hi TagListVisibilityStatic    guifg=#cf9ebe
+    endif
 
     nnoremap <silent> <buffer> <cr> :call <SID>JumpToTag()<cr>
 
     " folding related mappings
+    nnoremap <silent> <buffer> o  :call <SID>FoldToggle()<cr>
     nnoremap <silent> <buffer> za :call <SID>FoldToggle()<cr>
     nnoremap <silent> <buffer> zA :call <SID>FoldToggle()<cr>
     nnoremap <silent> <buffer> zc :call <SID>FoldClose()<cr>
@@ -1079,9 +1098,6 @@ function! s:Window(settings, tags) " {{{
   if has_key(a:settings, 'format')
     let formatter = a:settings.format
   elseif len(a:tags)
-    if g:Tlist_Sort_Type == 'name'
-      call sort(a:tags, 'taglisttoo#util#SortTags')
-    endif
     let formatter = 's:FormatDefault'
   else
     let formatter = 's:FormatEmpty'
@@ -1132,6 +1148,9 @@ function! s:Window(settings, tags) " {{{
   let b:taglisttoo_content = [format.lines, content]
   let b:taglisttoo_tags = a:tags
   let b:taglisttoo_file_bufnr = file_bufnr
+
+  " must be after definition of buffer vars
+  setlocal foldexpr=s:FoldLevel(v:lnum) foldtext=getline(v:foldstart)
 endfunction " }}}
 
 function! s:ShowCurrentTag() " {{{

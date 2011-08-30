@@ -35,46 +35,130 @@
 "   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 " }}}
 
-function! taglisttoo#util#Formatter(tags) " {{{
-  let formatter = {'lines': [], 'content': [], 'syntax': [], 'tags': a:tags}
+" Script Variables {{{
+  let s:class = '^\(class\|interface\|object\)$'
+" }}}
+
+function! taglisttoo#util#Formatter(types, tags) " {{{
+  let formatter = {
+      \ 'lines': [], 'content': [], 'syntax': [],
+      \ 'types': a:types, 'tags': a:tags,
+      \ 'headings': [],
+    \ }
 
   function! formatter.filename() dict " {{{
     call add(self.content, expand('%:t'))
     call add(self.lines, -1)
   endfunction " }}}
 
-  function! formatter.format(type, values, indent) dict " {{{
-    if len(a:values) > 0
-      if g:Tlist_Sort_Type == 'name'
-        call sort(a:values, 'taglisttoo#util#SortTags')
-      endif
-
-      call self.heading(a:type, {}, a:indent)
-
-      for value in a:values
-        let visibility = taglisttoo#util#GetVisibility(value)
-        call add(self.content, "\t" . a:indent . visibility . value.name)
-        call add(self.lines, index(self.tags, value))
-      endfor
+  function! formatter.format(values, indent) dict " {{{
+    if type(a:values) == 4
+      let tag = a:values
+      call self.add(tag, a:indent)
+    elseif type(a:values) == 3 && len(a:values) > 0
+      call self.recurse(a:values, a:indent)
     endif
   endfunction " }}}
 
-  function! formatter.heading(type, tag, indent) dict " {{{
-    if len(a:tag)
-      call add(self.lines, index(self.tags, a:tag))
-      call add(self.content, a:indent . a:type . ' ' . a:tag.name)
-      call add(self.syntax,
-        \ 'syn match TagListKeyword "^\s*' . a:type . '\%' . len(self.lines) . 'l"')
-    else
-      call add(self.lines, 'label')
-      call add(self.content, a:indent . a:type)
-      call add(self.syntax, 'syn match TagListKeyword "^.*\%' . len(self.lines) . 'l.*"')
+  function! formatter.recurse(values, indent) dict " {{{
+    if !len(a:values)
+      return
     endif
+
+    if g:Tlist_Sort_Type == 'name'
+      call sort(a:values, 'taglisttoo#util#SortTags', self)
+    endif
+
+    call add(self.headings, '')
+
+    for value in a:values
+      let tag_type = self.types[value.type]
+      if !self.in_heading(tag_type) && tag_type !~ s:class
+        call self.heading(tag_type, a:indent)
+      endif
+
+      let indent = a:indent
+      if self.current_heading() != ''
+        " indent tags below a heading an extra level
+        let indent = a:indent . "\t"
+      endif
+
+      call self.add(value, indent)
+    endfor
+
+    let self.headings = self.headings[:-2]
+  endfunction " }}}
+
+  function! formatter.add(value, indent) dict " {{{
+    let indent = a:indent
+    let tag_type = self.types[a:value.type]
+
+    let [visibility, visibility_syntax] = taglisttoo#util#GetVisibility(a:value)
+    let name = a:value.name
+
+    if tag_type =~ s:class
+      let name .= ' : ' . tag_type
+      if indent == ''
+        call self.blank()
+      endif
+      " indent nested classes, but line up w/ preceding headings.
+      if self.current_heading() != ''
+        let indent = indent[:-2]
+      endif
+      if len(self.headings)
+        let self.headings[-1] = tag_type
+      endif
+    endif
+
+    call add(self.lines, index(self.tags, a:value))
+    call add(self.content, indent . visibility . name)
+    call add(self.syntax,
+      \ 'syn match TagListKeyword "' . tag_type . '\%' . len(self.lines) . 'l$"')
+    if visibility != ''
+      call add(self.syntax,
+        \ 'syn match ' . visibility_syntax .
+        \ ' "^\s*\M' . visibility . '\m\%' . len(self.lines) . 'l"')
+    endif
+
+    let parent = ''
+    if get(a:value, 'parent', '') != ''
+      let parent = join(split(a:value.parent, ':')[1:], ':') . '.'
+    endif
+    let parent = tag_type . ':' . parent . a:value.name
+    let nested = filter(copy(self.tags),
+      \ 'get(v:val, "parent", "") == "' . parent . '"')
+    call self.recurse(nested, indent . "\t")
+  endfunction " }}}
+
+  function! formatter.heading(label, indent) dict " {{{
+    let self.headings[-1] = a:label
+    call add(self.lines, 'label')
+    call add(self.content, a:indent . a:label)
+    call add(self.syntax, 'syn match TagListKeyword "^.*\%' . len(self.lines) . 'l.*"')
+  endfunction " }}}
+
+  function! formatter.in_heading(name) dict " {{{
+    for h in reverse(copy(self.headings))
+      if h == ''
+        continue
+      endif
+      return h == a:name
+    endfor
+  endfunction " }}}
+
+  function! formatter.current_heading() dict " {{{
+    return len(self.headings) ? self.headings[-1] : ''
   endfunction " }}}
 
   function! formatter.blank() dict " {{{
-    call add(self.content, '')
-    call add(self.lines, -1)
+    if len(self.headings)
+      let self.headings[-1] = ''
+    endif
+
+    if self.content[-1] != ''
+      call add(self.content, '')
+      call add(self.lines, -1)
+    endif
   endfunction " }}}
 
   return formatter
@@ -84,15 +168,15 @@ function! taglisttoo#util#GetVisibility(tag) " {{{
   let pattern = a:tag.pattern
   if pattern =~ '\<public\>'
     if pattern =~ '\<static\>'
-      return '*'
+      return ['*', 'TagListVisibilityStatic']
     endif
-    return '+'
+    return ['+', 'TagListVisibilityPublic']
   elseif pattern =~ '\<protected\>'
-    return '#'
+    return ['#', 'TagListVisibilityProtected']
   elseif pattern =~ '\<private\>'
-    return '-'
+    return ['-', 'TagListVisibilityPrivate']
   endif
-  return ''
+  return ['', '']
 endfunction " }}}
 
 function! taglisttoo#util#Parse(file, patterns) " {{{
@@ -122,7 +206,20 @@ PYTHONEOF
   return tags
 endfunction " }}}
 
-function! taglisttoo#util#SortTags(tag1, tag2) " {{{
+function! taglisttoo#util#SortTags(tag1, tag2) dict " {{{
+  let type1 = self.types[a:tag1.type]
+  let type2 = self.types[a:tag2.type]
+
+  if type1 != type2
+    if type1 =~ s:class && type2 !~ s:class
+      return 1
+    elseif type1 !~ s:class && type2 =~ s:class
+      return -1
+    endif
+
+    return type1 > type2 ? 1 : -1
+  endif
+
   let name1 = tolower(a:tag1.name)
   let name2 = tolower(a:tag2.name)
   return name1 == name2 ? 0 : name1 > name2 ? 1 : -1
