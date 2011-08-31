@@ -800,7 +800,7 @@ function! s:GetTagInfo() " {{{
   endif
 
   let index = b:taglisttoo_content[0][line('.') - 1]
-  if index == -1 || index == 'label'
+  if index == -1 || (type(index) == 1 && index == 'label')
     return {}
   endif
 
