@@ -66,7 +66,7 @@ function! taglisttoo#util#Formatter(types, tags) " {{{
     endif
 
     if g:Tlist_Sort_Type == 'name'
-      call sort(a:values, 'taglisttoo#util#SortTags', self)
+      call sort(a:values, 's:SortTagsByName', self)
     endif
 
     call add(self.headings, '')
@@ -128,7 +128,7 @@ function! taglisttoo#util#Formatter(types, tags) " {{{
     endif
     let parent = tag_type . ':' . parent . a:value.name
     let nested = filter(copy(self.tags),
-      \ 'get(v:val, "parent", "") == "' . parent . '"')
+      \ 'get(v:val, "parent", "") == "' . parent . '" && v:val.line > ' . a:value.line)
     call self.recurse(nested, indent . "\t")
   endfunction " }}}
 
@@ -205,10 +205,58 @@ PYTHONEOF
     endfor
   endif
 
+  call sort(tags, 's:SortTagsByLine')
+
   return tags
 endfunction " }}}
 
-function! taglisttoo#util#SortTags(tag1, tag2) dict " {{{
+function! taglisttoo#util#SetNestedParents(types, tags, parent_types, parent_pair_start, parent_pair_end) " {{{
+  let pos = getpos('.')
+
+  let parents = []
+
+  for tag in a:tags
+    " pop off any parents that we've moved out of scope of
+    while len(parents) && tag.line > parents[-1].end
+      let parents = parents[:-2]
+    endwhile
+
+    " check if tag is a child
+    if len(parents) && tag.line < parents[-1].end
+      let parent = parents[-1]
+      let parent_name = ''
+      for parent in parents
+        if parent_name != ''
+          let parent_name .= '.'
+        endif
+        let parent_name .= parent.tag.name
+      endfor
+      let parent_name = a:types[parents[-1].tag.type] . ':' . parent_name
+      let tag['parent'] = parent_name
+    endif
+
+    " check if tag is a potential parent
+    if index(a:parent_types, tag.type) != -1
+      call cursor(tag.line, 1)
+      while search(a:parent_pair_start, 'W') && s:SkipComments()
+        " no op
+      endwhile
+      let end = searchpair(
+        \ a:parent_pair_start, '', a:parent_pair_end, 'W', 's:SkipComments()')
+      call add(parents, {'tag': tag, 'start': tag.line, 'end': end})
+    endif
+  endfor
+
+  call setpos('.', pos)
+endfunction " }}}
+
+function! s:SortTagsByLine(tag1, tag2) " {{{
+  let line1 = a:tag1.line
+  let line2 = a:tag2.line
+  return line1 == line2 ? 0 : line1 > line2 ? 1 : -1
+endfunction " }}}
+
+function! s:SortTagsByName(tag1, tag2) dict " {{{
   let type1 = self.types[a:tag1.type]
   let type2 = self.types[a:tag2.type]
 
@@ -225,6 +273,11 @@ function! taglisttoo#util#SortTags(tag1, tag2) dict " {{{
   let name1 = tolower(a:tag1.name)
   let name2 = tolower(a:tag2.name)
   return name1 == name2 ? 0 : name1 > name2 ? 1 : -1
+endfunction " }}}
+
+function! s:SkipComments() " {{{
+  let synname = synIDattr(synID(line('.'), col('.'), 1), "name")
+  return synname =~? '\(comment\|string\)'
 endfunction " }}}
 
 " vim:ft=vim:fdm=marker

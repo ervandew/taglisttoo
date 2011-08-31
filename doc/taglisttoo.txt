@@ -9,7 +9,6 @@ TaglistToo                                       *taglisttoo* *TaglistToo*
   Configuration                      |taglisttoo-configuration|
   Extending / Customizing            |taglisttoo-customization|
     Parsing New File Types           |taglisttoo-parse|
-    Customizing taglist Contents     |taglisttoo-format|
 
 -----------------------------------------------------------------------------
 Prerequisites                                    *taglisttoo-prerequisites*
@@ -231,35 +230,5 @@ function instead of the default one.
 Note: This example introduces a new file type, webxml, which doesn't exist by
 default in vim, so if you want to test this out on a real web.xml file you'll
 need to manually set the file type (:set ft=webxml).
-
-Customizing taglist contents:                    *taglisttoo-format*
-
-In addition to parsing new file types, you can also customize the taglist
-format for new or existing file types. To do so you simply tell TaglistToo to
-use a different format function. Here is an example using TagListToo's python
-settings: >
-
-  let g:tlist_python_settings = {
-      \ 'lang': 'python',
-      \ 'format': 'taglisttoo#lang#python#Format',
-      \ 'tags': {
-        \ 'c': 'class',
-        \ 'm': 'member',
-        \ 'f': 'function'
-      \ }
-    \ }
->
-
-Instead of using the default format, TaglistToo will invoke the
-taglisttoo#lang#python#Format function which in this case will group members
-and functions by the class they are defined in and any global functions will
-be displayed at the top of the taglist window.
-
-Unfortunately, implementing a function which customizes the taglist layout is
-not as straight forward and writing one which parses a new file type. If you
-wish to write one of these format functions, currently you are best off
-copying one of the format functions defined in one of the
-autoload/taglisttoo/lang/<lang>.vim files and customizing it to your needs.
-Hopefully future versions of TaglistToo will make writing these easier.
 
 vim:tw=78:ft=help:norl:

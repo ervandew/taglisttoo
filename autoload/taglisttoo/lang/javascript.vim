@@ -41,136 +41,6 @@ if !exists('g:TaglistTooJSctags')
 endif
 " }}}
 
-function! taglisttoo#lang#javascript#Format(types, tags) " {{{
-  if !g:TaglistTooJSctags || !exists('g:Tlist_JSctags_Cmd')
-    return s:FormatRegexResults(a:types, a:tags)
-  endif
-  return s:FormatJSctagsResults(a:types, a:tags)
-endfunction " }}}
-
-function! s:FormatJSctagsResults(types, tags) " {{{
-  let formatter = taglisttoo#util#Formatter(a:types, a:tags)
-  call formatter.filename()
-
-  let functions = filter(copy(a:tags), 'v:val.type == "f" && v:val.namespace == ""')
-  if len(functions) > 0
-    call formatter.blank()
-    call formatter.format(functions, '')
-  endif
-
-  let members = filter(copy(a:tags), 'v:val.name == "includeScript"')
-
-  let objects = filter(copy(a:tags), 'v:val.jstype == "Object"')
-  for object in objects
-    if object.namespace != ''
-      let object.name = object.namespace . '.' . object.name
-    endif
-
-    call formatter.blank()
-    call formatter.format(object, '')
-
-    let members = filter(copy(a:tags), 'v:val.type == "f" && v:val.namespace == object.name')
-    call formatter.format(members, "\t")
-  endfor
-
-  return formatter
-endfunction " }}}
-
-function! s:FormatRegexResults(types, tags) " {{{
-  let pos = getpos('.')
-
-  let formatter = taglisttoo#util#Formatter(a:types, a:tags)
-  call formatter.filename()
-
-  let object_contents = []
-
-  let objects = filter(copy(a:tags), 'v:val.type == "o"')
-  let members = filter(copy(a:tags), 'v:val.type == "m"')
-  let functions = filter(copy(a:tags),
-    \ 'v:val.type == "f" && v:val.pattern =~ "\\<function\\>"')
-  let object_bounds = {}
-  for object in objects
-    let object_start = object.line
-    call cursor(object_start, 1)
-    while search('{', 'W') && s:SkipComments()
-      " no op
-    endwhile
-    let object_end = searchpair('{', '', '}', 'W', 's:SkipComments()')
-
-    let methods = []
-    let indexes = []
-    let index = 0
-    for fct in members
-      if len(fct) > 3
-        let fct_line = fct.line
-        if fct_line > object_start && fct_line < object_end
-          call add(methods, fct)
-        elseif fct_line > object_end
-          break
-        elseif fct_line < object_end
-          call add(indexes, index)
-        endif
-      endif
-      let index += 1
-    endfor
-    call reverse(indexes)
-    for i in indexes
-      call remove(members, i)
-    endfor
-
-    let indexes = []
-    let index = 0
-    for fct in functions
-      if len(fct) > 3
-        let fct_line = fct.line
-        if fct_line > object_start && fct_line < object_end
-          call add(methods, fct)
-          call add(indexes, index)
-        elseif fct_line == object_start
-          call add(indexes, index)
-        elseif fct_line > object_end
-          break
-        endif
-      endif
-      let index += 1
-    endfor
-    call reverse(indexes)
-    for i in indexes
-      call remove(functions, i)
-    endfor
-
-    if len(methods) > 0
-      let parent_object = s:GetParentObject(
-        \ object_contents, object_bounds, object_start, object_end)
-      " remove methods from the parent if necessary
-      if len(parent_object)
-        call filter(parent_object.methods, 'index(methods, v:val) == -1')
-      endif
-      let object_bounds[string(object)] = [object_start, object_end]
-      call add(object_contents, {'object': object, 'methods': methods})
-    endif
-  endfor
-
-  if len(functions) > 0
-    call formatter.blank()
-    call formatter.format(functions, '')
-  endif
-
-  if g:Tlist_Sort_Type == 'name'
-    call sort(object_contents, function('s:ObjectComparator'))
-  endif
-
-  for object_content in object_contents
-    call formatter.blank()
-    call formatter.format(object_content.object, '')
-    call formatter.format(object_content.methods, "\t")
-  endfor
-
-  call setpos('.', pos)
-
-  return formatter
-endfunction " }}}
-
 function! taglisttoo#lang#javascript#Parse(file, settings) " {{{
   if g:TaglistTooJSctags && !exists('g:Tlist_JSctags_Cmd')
     if executable('jsctags')
@@ -268,36 +138,16 @@ function! s:ParseRegex(file, settings) " {{{
   " Match Functions
   call add(patterns, ['f', '\bfunction\s+([a-zA-Z0-9_.\$]+?)\s*\(', 1])
   call add(patterns, ['f', '([a-zA-Z0-9_.\$]+?)\s*=\s*function\s*\(', 1])
+  call add(patterns, ['f', "\\[[\"']([A-Za-z0-9_]+)[\"']\\]\\s*=\\s*function\\s*\\(", 1])
 
   " Match Members
-  call add(patterns, ['m', '\b([a-zA-Z0-9_.\$]+?)\s*:\s*function\s*\(', 1])
-  return taglisttoo#util#Parse(a:file, patterns)
-endfunction " }}}
+  call add(patterns, ['f', '\b([a-zA-Z0-9_.\$]+?)\s*:\s*function\s*\(', 1])
+  let tags = taglisttoo#util#Parse(a:file, patterns)
 
-function s:ObjectComparator(o1, o2) " {{{
-  let n1 = a:o1['object'].name
-  let n2 = a:o2['object'].name
-  return n1 == n2 ? 0 : n1 > n2 ? 1 : -1
-endfunction " }}}
+  call taglisttoo#util#SetNestedParents(
+    \ a:settings.tags, tags, ['o', 'f', 'm'], '{', '}')
 
-function s:SkipComments() " {{{
-  let synname = synIDattr(synID(line('.'), col('.'), 1), "name")
-  return synname =~? '\(comment\|string\)'
-endfunction " }}}
-
-function s:GetParentObject(objects, bounds, start, end) " {{{
-  for key in keys(a:bounds)
-    let range = a:bounds[key]
-    if range[0] < a:start && range[1] > a:end
-      for object_content in a:objects
-        if string(object_content.object) == key
-          return object_content
-        endif
-      endfor
-      break
-    endif
-  endfor
-  return {}
+  return tags
 endfunction " }}}
 
 " vim:ft=vim:fdm=marker

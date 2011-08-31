@@ -247,11 +247,9 @@ let s:tlist_java_settings = {
 
 let s:tlist_javascript_settings = {
     \ 'lang': 'javascript',
-    \ 'format': 'taglisttoo#lang#javascript#Format',
     \ 'parse': 'taglisttoo#lang#javascript#Parse',
     \ 'tags': {
       \ 'o': 'object',
-      \ 'm': 'member',
       \ 'f': 'function',
     \ }
   \ }
@@ -303,7 +301,6 @@ let s:tlist_perl_settings = {
 " php language
 let s:tlist_php_settings = {
     \ 'lang': 'php',
-    \ 'format': 'taglisttoo#lang#php#Format',
     \ 'parse': 'taglisttoo#lang#php#Parse',
     \ 'tags': {
       \ 'c': 'class',

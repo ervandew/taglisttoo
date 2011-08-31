@@ -35,108 +35,18 @@
 "   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 " }}}
 
-" Format(types, tags) {{{
-function! taglisttoo#lang#php#Format(types, tags)
-  let pos = getpos('.')
-
-  let formatter = taglisttoo#util#Formatter(a:types, a:tags)
-  call formatter.filename()
-
-  let top_functions = filter(copy(a:tags), 'v:val.type == "f"')
-
-  let class_contents = []
-  let classes = filter(copy(a:tags), 'v:val.type == "c"')
-  if g:Tlist_Sort_Type == 'name'
-    call sort(classes, 'taglisttoo#util#SortTags', formatter)
-  endif
-  for class in classes
-    let object_start = class.line
-    call cursor(object_start, 1)
-    call search('{', 'W')
-    let object_end = searchpair('{', '', '}', 'W')
-
-    let functions = []
-    let indexes = []
-    let index = 0
-    for fct in top_functions
-      if len(fct) > 3
-        let fct_line = fct.line
-        if fct_line > object_start && fct_line < object_end
-          call add(functions, fct)
-          call add(indexes, index)
-        endif
-      endif
-      let index += 1
-    endfor
-    call reverse(indexes)
-    for i in indexes
-      call remove(top_functions, i)
-    endfor
-
-    call add(class_contents, {'class': class, 'functions': functions})
-  endfor
-
-  let interface_contents = []
-  let interfaces = filter(copy(a:tags), 'v:val.type == "i"')
-  if g:Tlist_Sort_Type == 'name'
-    call sort(interfaces, 'taglisttoo#util#SortTags', formatter)
-  endif
-  for interface in interfaces
-    let object_start = interface.line
-    call cursor(object_start, 1)
-    call search('{', 'W')
-    let object_end = searchpair('{', '', '}', 'W')
-
-    let functions = []
-    let indexes = []
-    let index = 0
-    for fct in top_functions
-      if len(fct) > 3
-        let fct_line = fct.line
-        if fct_line > object_start && fct_line < object_end
-          call add(functions, fct)
-          call add(indexes, index)
-        endif
-      endif
-      let index += 1
-    endfor
-    call reverse(indexes)
-    for i in indexes
-      call remove(top_functions, i)
-    endfor
-
-    call add(interface_contents, {'interface': interface, 'functions': functions})
-  endfor
-
-  if len(top_functions) > 0
-    call formatter.blank()
-    call formatter.format(top_functions, '')
-  endif
-
-  for class_content in class_contents
-    call formatter.blank()
-    call formatter.format(class_content.class, '')
-    call formatter.format(class_content.functions, "\t")
-  endfor
-
-  for interface_content in interface_contents
-    call formatter.blank()
-    call formatter.format(interface_content.interface, '')
-    call formatter.format(interface_content.functions, "\t")
-  endfor
-
-  call setpos('.', pos)
-
-  return formatter
-endfunction " }}}
-
 " Parse(file, settings) {{{
 function! taglisttoo#lang#php#Parse(file, settings)
-  return taglisttoo#util#Parse(a:file, [
+  let tags = taglisttoo#util#Parse(a:file, [
       \ ['f', '\bfunction\s+([a-zA-Z0-9_]+)\s*\(', 1],
       \ ['c', '\bclass\s+([a-zA-Z0-9_]+)', 1],
       \ ['i', '\binterface\s+([a-zA-Z0-9_]+)', 1],
     \ ])
+
+  call taglisttoo#util#SetNestedParents(
+    \ a:settings.tags, tags, ['c', 'i', 'f'], '{', '}')
+
+  return tags
 endfunction " }}}
 
 " vim:ft=vim:fdm=marker
