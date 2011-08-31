@@ -168,14 +168,14 @@ endfunction " }}}
 
 function! taglisttoo#util#GetVisibility(tag) " {{{
   let pattern = a:tag.pattern
-  if pattern =~ '\<public\>'
-    if pattern =~ '\<static\>'
+  if pattern =~ '\<public\>.*' . a:tag.name
+    if pattern =~ '\<static\>.*' . a:tag.name
       return ['*', 'TagListVisibilityStatic']
     endif
     return ['+', 'TagListVisibilityPublic']
-  elseif pattern =~ '\<protected\>'
+  elseif pattern =~ '\<protected\>.*' . a:tag.name
     return ['#', 'TagListVisibilityProtected']
-  elseif pattern =~ '\<private\>'
+  elseif pattern =~ '\<private\>.*' . a:tag.name
     return ['-', 'TagListVisibilityPrivate']
   endif
   return ['', '']
