@@ -128,7 +128,8 @@ let s:tlist_cpp_settings = {
       \ 'g': 'enum',
       \ 's': 'struct',
       \ 'u': 'union',
-      \ 'f': 'function'
+      \ 'f': 'function',
+      \ 'p': 'prototypes',
     \ }
   \ }
 
@@ -147,6 +148,9 @@ let s:tlist_cs_settings = {
       \ 'm': 'method'
     \ }
   \ }
+
+" clojure
+let s:tlist_clojure_settings = {'lang': 'lisp', 'tags': {'f': 'function'}}
 
 " cobol language
 let s:tlist_cobol_settings = {
@@ -293,7 +297,9 @@ let s:tlist_pascal_settings = {
 
 " perl language
 let s:tlist_perl_settings = {
-    \ 'lang': 'perl', 'tags': {
+    \ 'lang': 'perl',
+    \ 'parse': 'taglisttoo#lang#perl#Parse',
+    \ 'tags': {
       \ 'c': 'constant',
       \ 'l': 'label',
       \ 'p': 'package',
@@ -341,6 +347,24 @@ let s:tlist_ruby_settings = {
       \ 'F': 'singleton method'
     \ }
   \ }
+
+" scala language
+let s:tlist_scala_settings = {
+    \ 'lang': 'scala',
+    \ 'parse': 'taglisttoo#lang#scala#Parse',
+    \ 'tags': {
+      \ 'p': 'package',
+      \ 'c': 'class',
+      \ 'o': 'object',
+      \ 't': 'trait',
+      \ 'T': 'type',
+      \ 'm': 'method',
+    \ }
+  \ }
+  " parsed for correct detection of parent tags, but not displayed to reduce
+  " clutter
+  "    \ 'C': 'constant',
+  "    \ 'l': 'local variable',
 
 " scheme language
 let s:tlist_scheme_settings = {
@@ -446,7 +470,9 @@ let s:tlist_verilog_settings = {
 
 " vim language
 let s:tlist_vim_settings = {
-    \ 'lang': 'vim', 'tags': {
+    \ 'lang': 'vim',
+    \ 'parse': 'taglisttoo#lang#vim#Parse',
+    \ 'tags': {
       \ 'a': 'autocmds',
       \ 'v': 'variable',
       \ 'f': 'function'

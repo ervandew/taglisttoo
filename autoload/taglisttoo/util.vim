@@ -36,7 +36,7 @@
 " }}}
 
 " Script Variables {{{
-  let s:class = '^\(class\|interface\|object\|package\|namespace\|struct\)$'
+  let s:class = '^\(class\|interface\|object\|package\|namespace\|struct\|trait\|type\)$'
 " }}}
 
 function! taglisttoo#util#Formatter(settings, tags) " {{{
@@ -72,6 +72,10 @@ function! taglisttoo#util#Formatter(settings, tags) " {{{
     call add(self.headings, '')
 
     for value in a:values
+      if !has_key(self.types, value.type)
+        continue
+      endif
+
       let tag_type = self.types[value.type]
       if !self.in_heading(tag_type) && tag_type !~ s:class
         call self.heading(tag_type, a:indent)
@@ -130,9 +134,12 @@ function! taglisttoo#util#Formatter(settings, tags) " {{{
     endif
     let parent = tag_type . ':' . parent . a:value.name
     let lnum = a:value.line
-    let nested = filter(copy(self.tags),
-      \ 'get(v:val, "parent", "") == parent && v:val.line > lnum')
-    call self.recurse(nested, indent . "\t")
+    let next_idx = index(self.tags, a:value) + 1
+    if next_idx < len(self.tags) && get(self.tags[next_idx], "parent", "") == parent
+      let nested = filter(self.tags[next_idx :],
+        \ 'get(v:val, "parent", "") == parent')
+      call self.recurse(nested, indent . "\t")
+    endif
   endfunction " }}}
 
   function! formatter.heading(label, indent) dict " {{{
@@ -304,11 +311,20 @@ function! taglisttoo#util#SetNestedParents(types, tags, parent_types, parent_pai
     " check if tag is a potential parent
     if index(a:parent_types, tag.type) != -1
       call cursor(tag.line, 1)
+      let next_index = index(a:tags, tag) + 1
+      let next = next_index < len(a:tags) ? a:tags[next_index].line : line('$')
       while search(a:parent_pair_start, 'W') && s:SkipComments()
         " no op
       endwhile
+      " handle case where the pair start/end are optional for the type in the
+      " current language (eg. scala), by disalowing a start found on or past
+      " the next tag.
+      if line('.') != tag.line && line('.') >= next
+        continue
+      endif
+
       let end = searchpair(
-        \ a:parent_pair_start, '', a:parent_pair_end, 'W', 's:SkipComments()')
+        \ a:parent_pair_start, '', a:parent_pair_end, 'Wn', 's:SkipComments()')
       call add(parents, {'tag': tag, 'start': tag.line, 'end': end})
     endif
   endfor
@@ -323,8 +339,8 @@ function! s:SortTagsByLine(tag1, tag2) " {{{
 endfunction " }}}
 
 function! s:SortTagsByName(tag1, tag2) dict " {{{
-  let type1 = self.types[a:tag1.type]
-  let type2 = self.types[a:tag2.type]
+  let type1 = get(self.types, a:tag1.type, '')
+  let type2 = get(self.types, a:tag2.type, '')
 
   if type1 != type2
     if type1 =~ s:class && type2 !~ s:class
