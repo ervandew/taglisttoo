@@ -116,7 +116,10 @@ let s:tlist_c_settings = {
 
 " c++ language
 let s:tlist_cpp_settings = {
-    \ 'lang': 'c++', 'tags': {
+    \ 'lang': 'c++',
+    \ 'separator': '::',
+    \ 'parse': 'taglisttoo#lang#cpp#Parse',
+    \ 'tags': {
       \ 'n': 'namespace',
       \ 'v': 'variable',
       \ 'd': 'macro',
@@ -673,7 +676,7 @@ function! s:ProcessTags(on_open_or_write) " {{{
       if has_key(settings, 'parse')
         let tags = s:Function(settings.parse)(file, settings)
       else
-        let tags = s:Parse(file, settings)
+        let tags = taglisttoo#util#ParseCtags(file, settings)
       endif
     catch /E700/
       call s:EchoError('Unknown function: ' . settings.parse)
@@ -712,73 +715,11 @@ function! s:ProcessTags(on_open_or_write) " {{{
   call s:ShowCurrentTag()
 endfunction " }}}
 
-function! s:Parse(filename, settings) " {{{
-python << PYTHONEOF
-try:
-  settings = vim.eval('a:settings')
-  filename = vim.eval('a:filename')
-  lang = settings['lang']
-  types = ''.join(settings['tags'].keys())
-
-  retcode, result = taglisttoo.ctags(lang, types, filename)
-  vim.command('let retcode = %i' % retcode)
-  vim.command("let result = '%s'" % result.replace("'", "''"))
-except Exception as e:
-  vim.command("call s:EchoError('%s')" % str(e).replace("'", "''"))
-  vim.command('let retcode = -1')
-PYTHONEOF
-
-  if retcode
-    if retcode != -1
-      call s:EchoError('taglist failed with error code: ' . retcode)
-    endif
-    return
-  endif
-
-  if has('win32') || has('win64') || has('win32unix')
-    let result = substitute(result, "\<c-m>\n", '\n', 'g')
-  endif
-
-  let results = split(result, '\n')
-  while len(results) && results[0] =~ 'ctags.*: Warning:'
-    call remove(results, 0)
-  endwhile
-
-  let types = keys(a:settings.tags)
-  let parsed_results = []
-  for result in results
-    let pre = substitute(result, '\(.\{-}\)\t\/\^.*', '\1', '')
-    let pattern = substitute(result, '.\{-}\(\/\^.*\/;"\).*', '\1', '')
-    let post = substitute(result, '.\{-}\/\^.*\/;"\t', '', '')
-
-    let [name, filename] = split(pre, '\t')
-    let parts = split(post, '\t')
-    let [type, line_str] = parts[:1]
-    exec 'let line = ' . substitute(line_str, 'line:', '', '')
-    let pattern = substitute(pattern, '^/\(.*\)/;"$', '\1', '')
-    let parent = len(parts) > 2 ? parts[2] : ''
-
-    " ctags (mine at least) is not properly honoring --<lang>-kinds, so
-    " perform our own check here.
-    if index(types, type) != -1
-      call add(parsed_results, {
-          \ 'type': type,
-          \ 'name': name,
-          \ 'pattern': pattern,
-          \ 'line': line,
-          \ 'parent': parent,
-        \ })
-    endif
-  endfor
-
-  return parsed_results
-endfunction " }}}
-
-function! s:FormatDefault(types, tags) " {{{
-  let formatter = taglisttoo#util#Formatter(a:types, a:tags)
+function! s:FormatDefault(settings, tags) " {{{
+  let formatter = taglisttoo#util#Formatter(a:settings, a:tags)
   call formatter.filename()
 
-  for key in keys(a:types)
+  for key in keys(a:settings.tags)
     let values = filter(copy(a:tags),
       \ 'v:val.type == key && get(v:val, "parent", "") == ""')
     if len(values)
@@ -951,7 +892,7 @@ endfunction " }}}
 
 function! s:JumpToTag() " {{{
   let tag_info = s:GetTagInfo()
-  if !len(tag_info)
+  if !len(tag_info) || tag_info.line == -1 || get(tag_info, 'pattern', '') == ''
     return
   endif
 
@@ -1099,7 +1040,7 @@ function! s:Window(settings, tags) " {{{
   endif
 
   try
-    let format = s:Function(formatter)(a:settings.tags, a:tags)
+    let format = s:Function(formatter)(a:settings, a:tags)
   catch /E700/
     call s:EchoError('Unknown function: ' . formatter)
     return

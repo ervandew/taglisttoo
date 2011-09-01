@@ -36,14 +36,14 @@
 " }}}
 
 " Script Variables {{{
-  let s:class = '^\(class\|interface\|object\)$'
+  let s:class = '^\(class\|interface\|object\|package\|namespace\|struct\)$'
 " }}}
 
-function! taglisttoo#util#Formatter(types, tags) " {{{
+function! taglisttoo#util#Formatter(settings, tags) " {{{
   let formatter = {
-      \ 'lines': [], 'content': [], 'syntax': [],
-      \ 'types': a:types, 'tags': a:tags,
-      \ 'headings': [],
+      \ 'lines': [], 'content': [], 'syntax': [], 'headings': [],
+      \ 'settings': a:settings, 'types': a:settings.tags,
+      \ 'tags': a:tags,
     \ }
 
   function! formatter.filename() dict " {{{
@@ -124,11 +124,14 @@ function! taglisttoo#util#Formatter(types, tags) " {{{
 
     let parent = ''
     if get(a:value, 'parent', '') != ''
-      let parent = join(split(a:value.parent, ':')[1:], ':') . '.'
+      let parent_type = substitute(a:value.parent, '^\(.\{-}\):.*', '\1', '')
+      let parent_name = substitute(a:value.parent, '^.\{-}:\(.*\)', '\1', '')
+      let parent = parent_name . get(self.settings, 'separator', '.')
     endif
     let parent = tag_type . ':' . parent . a:value.name
+    let lnum = a:value.line
     let nested = filter(copy(self.tags),
-      \ 'get(v:val, "parent", "") == "' . parent . '" && v:val.line > ' . a:value.line)
+      \ 'get(v:val, "parent", "") == parent && v:val.line > lnum')
     call self.recurse(nested, indent . "\t")
   endfunction " }}}
 
@@ -168,14 +171,15 @@ endfunction " }}}
 
 function! taglisttoo#util#GetVisibility(tag) " {{{
   let pattern = a:tag.pattern
-  if pattern =~ '\<public\>.*' . a:tag.name
-    if pattern =~ '\<static\>.*' . a:tag.name
+  let name = escape(a:tag.name, '~')
+  if pattern =~ '\<public\>.*' . name
+    if pattern =~ '\<static\>.*' . name
       return ['*', 'TagListVisibilityStatic']
     endif
     return ['+', 'TagListVisibilityPublic']
-  elseif pattern =~ '\<protected\>.*' . a:tag.name
+  elseif pattern =~ '\<protected\>.*' . name
     return ['#', 'TagListVisibilityProtected']
-  elseif pattern =~ '\<private\>.*' . a:tag.name
+  elseif pattern =~ '\<private\>.*' . name
     return ['-', 'TagListVisibilityPrivate']
   endif
   return ['', '']
@@ -208,6 +212,68 @@ PYTHONEOF
   call sort(tags, 's:SortTagsByLine')
 
   return tags
+endfunction " }}}
+
+function! taglisttoo#util#ParseCtags(filename, settings) " {{{
+python << PYTHONEOF
+try:
+  settings = vim.eval('a:settings')
+  filename = vim.eval('a:filename')
+  lang = settings['lang']
+  types = ''.join(settings['tags'].keys())
+
+  retcode, result = taglisttoo.ctags(lang, types, filename)
+  vim.command('let retcode = %i' % retcode)
+  vim.command("let result = '%s'" % result.replace("'", "''"))
+except Exception as e:
+  vim.command("call s:EchoError('%s')" % str(e).replace("'", "''"))
+  vim.command('let retcode = -1')
+PYTHONEOF
+
+  if retcode
+    if retcode != -1
+      call s:EchoError('taglist failed with error code: ' . retcode)
+    endif
+    return
+  endif
+
+  if has('win32') || has('win64') || has('win32unix')
+    let result = substitute(result, "\<c-m>\n", '\n', 'g')
+  endif
+
+  let results = split(result, '\n')
+  while len(results) && results[0] =~ 'ctags.*: Warning:'
+    call remove(results, 0)
+  endwhile
+
+  let types = keys(a:settings.tags)
+  let parsed_results = []
+  for result in results
+    let pre = substitute(result, '\(.\{-}\)\t\/\^.*', '\1', '')
+    let pattern = substitute(result, '.\{-}\(\/\^.*\/;"\).*', '\1', '')
+    let post = substitute(result, '.\{-}\/\^.*\/;"\t', '', '')
+
+    let [name, filename] = split(pre, '\t')
+    let parts = split(post, '\t')
+    let [type, line_str] = parts[:1]
+    exec 'let line = ' . substitute(line_str, 'line:', '', '')
+    let pattern = substitute(pattern, '^/\(.*\)/;"$', '\1', '')
+    let parent = len(parts) > 2 ? parts[2] : ''
+
+    " ctags (mine at least) is not properly honoring --<lang>-kinds, so
+    " perform our own check here.
+    if index(types, type) != -1
+      call add(parsed_results, {
+          \ 'type': type,
+          \ 'name': name,
+          \ 'pattern': pattern,
+          \ 'line': line,
+          \ 'parent': parent,
+        \ })
+    endif
+  endfor
+
+  return parsed_results
 endfunction " }}}
 
 function! taglisttoo#util#SetNestedParents(types, tags, parent_types, parent_pair_start, parent_pair_end) " {{{
