@@ -66,7 +66,7 @@ function! taglisttoo#util#Formatter(settings, tags) " {{{
     endif
 
     if g:Tlist_Sort_Type == 'name'
-      call sort(a:values, 's:SortTagsByName', self)
+      call sort(a:values, 's:SortTagsByName')
     endif
 
     call add(self.headings, '')
@@ -192,11 +192,12 @@ function! taglisttoo#util#GetVisibility(tag) " {{{
   return ['', '']
 endfunction " }}}
 
-function! taglisttoo#util#Parse(file, patterns) " {{{
+function! taglisttoo#util#Parse(file, settings, patterns) " {{{
 python << PYTHONEOF
 filename = vim.eval('a:file')
 patterns = vim.eval('a:patterns')
-result = taglisttoo.parse(filename, patterns)
+settings = vim.eval('a:settings')
+result = taglisttoo.parse(filename, settings, patterns)
 vim.command('let results = %s' % ('%r' % result).replace("\\'", "''"))
 PYTHONEOF
 
@@ -272,6 +273,7 @@ PYTHONEOF
     if index(types, type) != -1
       call add(parsed_results, {
           \ 'type': type,
+          \ 'type_name': types[type],
           \ 'name': name,
           \ 'pattern': pattern,
           \ 'line': line,
@@ -338,9 +340,9 @@ function! s:SortTagsByLine(tag1, tag2) " {{{
   return line1 == line2 ? 0 : line1 > line2 ? 1 : -1
 endfunction " }}}
 
-function! s:SortTagsByName(tag1, tag2) dict " {{{
-  let type1 = get(self.types, a:tag1.type, '')
-  let type2 = get(self.types, a:tag2.type, '')
+function! s:SortTagsByName(tag1, tag2) " {{{
+  let type1 = a:tag1.type_name
+  let type2 = a:tag2.type_name
 
   if type1 != type2
     if type1 =~ s:class && type2 !~ s:class

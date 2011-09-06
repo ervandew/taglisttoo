@@ -37,7 +37,7 @@
 
 " Parse(file, settings) {{{
 function! taglisttoo#lang#scala#Parse(file, settings)
-  let tags = taglisttoo#util#Parse(a:file, [
+  let tags = taglisttoo#util#Parse(a:file, a:settings, [
       \ ['p', '\bpackage\s+([a-zA-Z0-9_.]+)', 1],
       \ ['c', '\bclass\s+([a-zA-Z0-9_]+)', 1],
       \ ['o', '\bobject\s+([a-zA-Z0-9_]+)', 1],

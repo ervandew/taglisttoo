@@ -189,7 +189,7 @@ replacement text or group used to obtain the tag name.
 Here is an example function which processes the web.xml file described above: >
 
   function! ParseWebXml(file, settings)
-    return taglisttoo#util#Parse(a:file, [
+    return taglisttoo#util#Parse(a:file, a:settings, [
         \ ['s', '<servlet\s*>\s*<servlet-name\s*>\s*(.*?)\s*</servlet-name\s*>', 1],
         \ ['m', '<servlet-mapping\s*>\s*<servlet-name\s*>\s*(.*?)\s*</servlet-name\s*>', 1],
       \ ])

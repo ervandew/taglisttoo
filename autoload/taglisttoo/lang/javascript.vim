@@ -142,7 +142,7 @@ function! s:ParseRegex(file, settings) " {{{
 
   " Match Members
   call add(patterns, ['f', '\b([a-zA-Z0-9_.\$]+?)\s*:\s*function\s*\(', 1])
-  let tags = taglisttoo#util#Parse(a:file, patterns)
+  let tags = taglisttoo#util#Parse(a:file, a:settings, patterns)
 
   call taglisttoo#util#SetNestedParents(
     \ a:settings.tags, tags, ['o', 'f', 'm'], '{', '}')

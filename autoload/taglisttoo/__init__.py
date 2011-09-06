@@ -113,7 +113,8 @@ def jsctags(filename):
   finally:
     os.unlink(temp)
 
-def parse(filename, patterns):
+def parse(filename, settings, patterns):
+  types = settings['tags']
   f = open(filename, 'r')
   contents = f.read()
   f.close()
@@ -173,6 +174,7 @@ def parse(filename, patterns):
 
       results.append({
         'type': ptype,
+        'type_name': types.get(ptype, ptype),
         'name': name,
         'pattern': '^%s$' % pattern,
         'line': line,

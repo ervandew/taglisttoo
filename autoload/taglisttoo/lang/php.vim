@@ -37,7 +37,7 @@
 
 " Parse(file, settings) {{{
 function! taglisttoo#lang#php#Parse(file, settings)
-  let tags = taglisttoo#util#Parse(a:file, [
+  let tags = taglisttoo#util#Parse(a:file, a:settings, [
       \ ['f', '\bfunction\s+([a-zA-Z0-9_]+)\s*\(', 1],
       \ ['c', '\bclass\s+([a-zA-Z0-9_]+)', 1],
       \ ['i', '\binterface\s+([a-zA-Z0-9_]+)', 1],
