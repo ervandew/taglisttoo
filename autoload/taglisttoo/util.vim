@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2011, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2012, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -234,15 +234,15 @@ try:
   vim.command('let retcode = %i' % retcode)
   vim.command("let result = '%s'" % result.replace("'", "''"))
 except Exception as e:
-  vim.command("call s:EchoError('%s')" % str(e).replace("'", "''"))
+  vim.command("call taglisttoo#util#EchoError('%s')" % str(e).replace("'", "''"))
   vim.command('let retcode = -1')
 PYTHONEOF
 
   if retcode
     if retcode != -1
-      call s:EchoError('taglist failed with error code: ' . retcode)
+      call taglisttoo#util#EchoError('taglist failed with error code: ' . retcode)
     endif
-    return
+    return []
   endif
 
   if has('win32') || has('win64') || has('win32unix')
@@ -332,6 +332,12 @@ function! taglisttoo#util#SetNestedParents(types, tags, parent_types, parent_pai
   endfor
 
   call setpos('.', pos)
+endfunction " }}}
+
+function! taglisttoo#util#EchoError(message) " {{{
+  echohl Error
+  echo a:message
+  echohl Normal
 endfunction " }}}
 
 function! s:SortTagsByLine(tag1, tag2) " {{{

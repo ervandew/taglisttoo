@@ -64,7 +64,7 @@ vim.command("let result = '%s'" % result.replace("'", "''"))
 PYTHONEOF
 
   if retcode
-    call s:EchoError('jsctags failed with error code: ' . retcode)
+    call taglisttoo#util#EchoError('jsctags failed with error code: ' . retcode)
     return
   endif
 

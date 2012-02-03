@@ -517,7 +517,7 @@ endfunction " }}}
 "   - 0: close
 function! taglisttoo#taglist#Taglist(...)
   if !exists('g:Tlist_Ctags_Cmd')
-    call s:EchoError('Unable to find a version of ctags installed.')
+    call taglisttoo#util#EchoError('Unable to find a version of ctags installed.')
     return
   endif
 
@@ -705,7 +705,7 @@ function! s:ProcessTags(on_open_or_write) " {{{
         let tags = taglisttoo#util#ParseCtags(file, settings)
       endif
     catch /E700/
-      call s:EchoError('Unknown function: ' . settings.parse)
+      call taglisttoo#util#EchoError('Unknown function: ' . settings.parse)
       return
     finally
       if tempfile != ''
@@ -772,12 +772,6 @@ function! s:GetTagInfo() " {{{
   endif
 
   return b:taglisttoo_tags[index]
-endfunction " }}}
-
-function! s:EchoError(message) " {{{
-  echohl Error
-  echo a:message
-  echohl Normal
 endfunction " }}}
 
 function! s:EchoTag() " {{{
@@ -1068,7 +1062,7 @@ function! s:Window(settings, tags) " {{{
   try
     let format = s:Function(formatter)(a:settings, a:tags)
   catch /E700/
-    call s:EchoError('Unknown function: ' . formatter)
+    call taglisttoo#util#EchoError('Unknown function: ' . formatter)
     return
   endtry
   let content = format.content
