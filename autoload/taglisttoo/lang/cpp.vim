@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2011, Eric Van Dewoestine
+"   Copyright (c) 2011 - 2012, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -108,6 +108,7 @@ function! taglisttoo#lang#cpp#Parse(file, settings)
             \ 'name': name,
             \ 'line': parent_line,
             \ 'type': type,
+            \ 'type_name': type_name,
             \ 'pattern': '',
             \ 'parent': parent_path
           \ }])
