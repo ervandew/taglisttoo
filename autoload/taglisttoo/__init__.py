@@ -1,5 +1,5 @@
 """
-Copyright (c) 2005 - 2011, Eric Van Dewoestine
+Copyright (c) 2005 - 2012, Eric Van Dewoestine
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms, with
@@ -40,6 +40,7 @@ import vim
 
 def ctags(lang, types, filename):
   ctags = vim.eval('g:Tlist_Ctags_Cmd')
+  debug = vim.eval('g:Tlist_Debug') != '0'
 
   startupinfo = None
   if os.name == 'nt':
@@ -52,22 +53,25 @@ def ctags(lang, types, filename):
   stdoutfile = tempfile.TemporaryFile()
   stderrfile = tempfile.TemporaryFile()
   try:
+    args = [
+      ctags,
+      '-f', '-',
+      '--format=2',
+      '--excmd=pattern',
+      '--fields=nks',
+      '--sort=no',
+      '--language-force=%s' % lang,
+      '--%s-types=%s' % (lang, types),
+      filename,
+    ]
+    if debug:
+      print ' '.join(args)
     process = subprocess.Popen(
-        [
-          ctags,
-          '-f', '-',
-          '--format=2',
-          '--excmd=pattern',
-          '--fields=nks',
-          '--sort=no',
-          '--language-force=%s' % lang,
-          '--%s-types=%s' % (lang, types),
-          filename,
-        ],
-        stdout=stdoutfile,
-        stderr=stderrfile,
-        stdin=subprocess.PIPE,
-        startupinfo=startupinfo,
+      args,
+      stdout=stdoutfile,
+      stderr=stderrfile,
+      stdin=subprocess.PIPE,
+      startupinfo=startupinfo,
     )
 
     retcode = process.wait()
@@ -84,6 +88,7 @@ def ctags(lang, types, filename):
 
 def jsctags(filename):
   jsctags = vim.eval('g:Tlist_JSctags_Cmd')
+  debug = vim.eval('g:Tlist_Debug') != '0'
 
   startupinfo = None
   if os.name == 'nt':
@@ -95,15 +100,14 @@ def jsctags(filename):
 
   temp = tempfile.mkstemp()[1]
   try:
+    args = [jsctags, '-o', temp, filename]
+    if debug:
+      print ' '.join(args)
     process = subprocess.Popen(
-        [
-          jsctags,
-          '-o', temp,
-          filename,
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        startupinfo=startupinfo,
+      args,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE,
+      startupinfo=startupinfo,
     )
 
     retcode = process.wait()

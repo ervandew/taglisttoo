@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2010, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2012, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -46,6 +46,10 @@ let g:taglisttoo_loaded = 1
 let g:loaded_taglist = 1
 
 " Global Variables {{{
+
+if !exists('g:Tlist_Debug')
+  let g:Tlist_Debug = 0
+endif
 
 if !exists('g:Tlist_Ctags_Cmd')
   if executable('exuberant-ctags')
