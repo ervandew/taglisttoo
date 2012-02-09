@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2011, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2012, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -37,11 +37,15 @@
 
 " Parse(file, settings) {{{
 function! taglisttoo#lang#htmljinja#Parse(file, settings)
+  let prefix = '{%-?'
+  if exists('b:jinja_line_statement_prefix')
+    let prefix = '(?:' . prefix . '|' . b:jinja_line_statement_prefix . ')'
+  endif
   return taglisttoo#util#Parse(a:file, a:settings, [
       \ ['a', "<a\\s+[^>]*?name=['\"](.*?)['\"]", 1],
       \ ['i', "<([a-z]*?)\\s+[^>]*?id=['\"](.*?)['\"]", '\1 \2'],
-      \ ['b', '\{%?\s*block\s+(\w+)', 1],
-      \ ['m', '\{%-?\s*macro\s+(\w+)\s*\(', 1],
+      \ ['b', prefix . '\s*block\s+(\w+)', 1],
+      \ ['m', prefix . '\s*macro\s+(\w+)\s*\(', 1],
     \ ])
 endfunction " }}}
 
