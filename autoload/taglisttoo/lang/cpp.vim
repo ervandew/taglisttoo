@@ -92,21 +92,12 @@ function! taglisttoo#lang#cpp#Parse(file, settings)
           endif
         endif
 
-        " top level injected parent can be pushed to the front of the tag list
-        if !len(parent)
-          let insert_index = index
-          let index += 1
-          let parent_line = -1
-
-        " nested injected parent must be inserted before its parent tag
-        else
-          let insert_index = len(parents) + index(tags, parent) + 1
-          let parent_line = parent.line + 1
-        endif
-
+        " injected parent before the first child occurance, taking into
+        " account any previously injected parents
+        let insert_index = len(parents) + index
         call add(parents, [insert_index, {
             \ 'name': name,
-            \ 'line': parent_line,
+            \ 'line': -1,
             \ 'type': type,
             \ 'type_name': type_name,
             \ 'pattern': '',
@@ -114,6 +105,7 @@ function! taglisttoo#lang#cpp#Parse(file, settings)
           \ }])
       endif
     endif
+    let index += 1
   endfor
 
   for [idx, parent] in parents
