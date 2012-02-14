@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2011, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2012, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -980,15 +980,9 @@ function! s:Window(settings, tags) " {{{
 
   let winnum = s:GetTagListWinnr()
   if winnum == -1
-    if exists('g:VerticalToolWindowSide') &&
-     \ g:VerticalToolWindowSide == g:TaglistTooPosition
-      call eclim#display#window#VerticalToolWindowOpen(s:taglisttoo_title, 10, 1)
-    else
-      let position = g:TaglistTooPosition == 'right' ? 'botright' : 'topleft'
-      silent exec
-        \ position . ' vertical ' . g:Tlist_WinWidth .
-        \ ' split ' . escape(s:taglisttoo_title, ' ')
-    endif
+    let position = g:TaglistTooPosition == 'right' ? 'botright' : 'topleft'
+    exec position . ' vertical ' . g:Tlist_WinWidth .
+      \ ' split ' . escape(s:taglisttoo_title, ' ')
 
     let winnum = s:GetTagListWinnr()
     exe winnum . 'wincmd w'
@@ -1182,14 +1176,11 @@ function! s:FileSupported(filename, ftype) " {{{
 endfunction " }}}
 
 function! s:CloseIfLastWindow() " {{{
-  if histget(':', -1) !~ '^bd'
-    let numtoolwindows = 0
-    if winnr('$') == 1
-      if tabpagenr('$') > 1
-        tabclose
-      else
-        quitall
-      endif
+  if winnr('$') == 1
+    if tabpagenr('$') > 1
+      tabclose
+    else
+      quitall
     endif
   endif
 endfunction " }}}
