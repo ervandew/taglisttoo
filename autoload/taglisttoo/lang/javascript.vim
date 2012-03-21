@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2011, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2012, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -122,7 +122,6 @@ function! s:ParseRegex(file, settings) " {{{
 
   " prototype.js has Object.extend to extend existing objects.
   call add(patterns, ['o', '(?:var\s+)?\b([A-Z][A-Za-z0-9_.]+)\s*=\s*Object\.extend\s*\(', 1])
-  call add(patterns, ['o', '\bObject\.extend\s*\(\b([A-Z][A-Za-z0-9_.]+)\s*,\s*\{', 1])
 
   " mootools uses 'new Class'
   call add(patterns, ['o', '(?:var\s+)?\b([A-Z][A-Za-z0-9_.]+)\s*=\s*new\s+Class\s*\(', 1])
@@ -134,6 +133,11 @@ function! s:ParseRegex(file, settings) " {{{
   call add(patterns, ['o', 'function\s+\b([A-Z][A-Za-z0-9_.]+)\s*\(', 1])
   " vimperator uses var = (function()
   call add(patterns, ['o', '([A-Za-z0-9_.]+)\s*=\s*\(function\s*\(', 1])
+
+  " other library based exend calls (backbone, etc)
+  call add(patterns,
+    \ ['o', '(?:var\s+)?\b([A-Z][A-Za-z0-9_.]+)\s*=\s*[A-Za-z0-9_.]+\.extend\s*\({', 1])
+  call add(patterns, ['o', '\.extend\s*\(\b([A-Z][A-Za-z0-9_.]+)\s*,\s*\{', 1])
 
   " Match Functions
   call add(patterns, ['f', '\bfunction\s+([a-zA-Z0-9_.\$]+?)\s*\(', 1])
