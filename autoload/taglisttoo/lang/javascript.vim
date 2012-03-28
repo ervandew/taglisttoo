@@ -141,8 +141,8 @@ function! s:ParseRegex(file, settings) " {{{
 
   " Match Functions
   call add(patterns, ['f', '\bfunction\s+([a-zA-Z0-9_.\$]+?)\s*\(', 1])
-  call add(patterns, ['f', '([a-zA-Z0-9_.\$]+?)\s*=\s*function\s*\(', 1])
-  call add(patterns, ['f', "\\[[\"']([A-Za-z0-9_]+)[\"']\\]\\s*=\\s*function\\s*\\(", 1])
+  call add(patterns, ['f', '([a-zA-Z0-9_.\$]+?)\s*=\s*\(?function\s*\(', 1])
+  call add(patterns, ['f', "\\[[\"']([A-Za-z0-9_]+)[\"']\\]\\s*=\\s*\\(?function\\s*\\(", 1])
 
   " Match Members
   call add(patterns, ['f', '\b([a-zA-Z0-9_.\$]+?)\s*:\s*function\s*\(', 1])
