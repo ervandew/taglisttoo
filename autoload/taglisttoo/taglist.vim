@@ -1062,7 +1062,12 @@ function! s:Window(settings, tags) " {{{
   let content = format.content
   exe winnum . 'wincmd w'
 
-  silent! syn clear TagListKeyword
+  silent! syn clear
+    \ TagListKeyword
+    \ TagListVisibilityPublic
+    \ TagListVisibilityPrivate
+    \ TagListVisibilityProtected
+    \ TagListVisibilityStatic
   for syn_cmd in format.syntax
     exec syn_cmd
   endfor
