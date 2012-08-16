@@ -65,7 +65,7 @@ endif
 
 " no ctags found, no need to continue.
 if !exists('g:Tlist_Ctags_Cmd')
-  echohl WarningMsg | echom 'ctags not found' | echohl Normal
+  command TlistToo :echohl WarningMsg | echom 'ctags not found' | echohl Normal
   finish
 endif
 
