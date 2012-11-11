@@ -510,12 +510,17 @@ function! taglisttoo#taglist#AutoOpen() " {{{
   endif
 endfunction " }}}
 
-" Taglist([action]) {{{
-" action
-"   - not supplied (or -1): toggle
-"   - 1: open
-"   - 0: close
-function! taglisttoo#taglist#Taglist(...)
+function! taglisttoo#taglist#Taglist(...) " {{{
+  " Optional arg:
+  "   options:
+  "     action:
+  "       - not supplied (or -1): toggle
+  "       - 1: open
+  "       - 0: close
+  "     pick:
+  "       - 1: opening the taglist temporarily to simply pick a tag then
+  "            close.
+
   if !exists('g:Tlist_Ctags_Cmd')
     call taglisttoo#util#EchoError('Unable to find a version of ctags installed.')
     return
@@ -528,7 +533,8 @@ function! taglisttoo#taglist#Taglist(...)
     return
   endif
 
-  let action = len(a:000) ? a:000[0] : -1
+  let options = len(a:000) ? a:000[0] : {}
+  let action = get(options, 'action', -1)
 
   if action == -1 || action == 0
     let winnum = s:GetTagListWinnr()
@@ -542,13 +548,13 @@ function! taglisttoo#taglist#Taglist(...)
   endif
 
   if action == -1 || action == 1
-    call s:ProcessTags(1)
+    call s:ProcessTags({'force': 1, 'pick': get(options, 'pick', 0)})
   endif
 endfunction " }}}
 
-" Restore() {{{
-" Restore the taglist, typically after loading from a session file.
-function! taglisttoo#taglist#Restore()
+function! taglisttoo#taglist#Restore() " {{{
+  " Restore the taglist, typically after loading from a session file.
+
   if exists('t:taglistoo_restoring')
     return
   endif
@@ -592,11 +598,11 @@ function! s:StartAutocmds() " {{{
     autocmd BufEnter <buffer> nested call s:CloseIfLastWindow()
     autocmd BufEnter *
       \ if s:GetTagListWinnr() != -1 |
-      \   call s:ProcessTags(0) |
+      \   call s:ProcessTags() |
       \ endif
     autocmd BufWritePost *
       \ if s:GetTagListWinnr() != -1 |
-      \   call s:ProcessTags(1) |
+      \   call s:ProcessTags({'force': 1}) |
       \ endif
     " bit of a hack to re-process tags if the filetype changes after the tags
     " have been processed.
@@ -604,7 +610,7 @@ function! s:StartAutocmds() " {{{
       \ if exists('b:ft') |
       \   if b:ft != &ft |
       \     if s:GetTagListWinnr() != -1 |
-      \       call s:ProcessTags(1) |
+      \       call s:ProcessTags({'force': 1}) |
       \     endif |
       \     let b:ft = &ft |
       \   endif |
@@ -638,7 +644,13 @@ function! s:Cleanup() " {{{
   " TODO: clear all b:taglisttoo_folds variables?
 endfunction " }}}
 
-function! s:ProcessTags(on_open_or_write) " {{{
+function! s:ProcessTags(...) " {{{
+  " Optional arg:
+  "   options:
+  "     force: force the tags to be process (newly opened files + file writes)
+  "     pick: processing tags as part of command to just pick the tag then
+  "       close the tag list.
+
   " on insert completion prevent vim's jumping back and forth from the
   " completion preview window from triggering a re-processing of tags
   if pumvisible()
@@ -649,9 +661,11 @@ function! s:ProcessTags(on_open_or_write) " {{{
     return
   endif
 
-  " if we are entering a buffer whose taglist list is already loaded, then
-  " don't do anything.
-  if !a:on_open_or_write
+  let options = len(a:000) ? a:000[0] : {}
+
+  " if tag processes is not forced and we are entering a buffer whose taglist
+  " list is already loaded, then don't do anything.
+  if !get(options, 'force', 0)
     let bufnr = s:GetTagListBufnr()
     let filebuf = getbufvar(bufnr, 'taglisttoo_file_bufnr')
     if filebuf == bufnr('%')
@@ -717,7 +731,8 @@ function! s:ProcessTags(on_open_or_write) " {{{
       return
     endif
 
-    call s:Window(settings, tags)
+    let temp = get(options, 'pick', 0)
+    call s:Window(settings, tags, temp)
 
     " if the file buffer is no longer in the same window it was, then find its
     " new location. Occurs when taglist first opens.
@@ -728,17 +743,24 @@ function! s:ProcessTags(on_open_or_write) " {{{
     if filewin != -1
       exec filewin . 'winc w'
     endif
+
+    call s:ShowCurrentTag()
+
+    " after showing the current tag jump back to the tag list if we're
+    " expecting the user to pick a tag and then close the window.
+    if temp
+      let twinnum = s:GetTagListWinnr()
+      exec twinnum . 'winc w'
+    endif
   else
     " if the file isn't supported, then don't open the taglist window if it
     " isn't open already.
     let winnum = s:GetTagListWinnr()
     if winnum != -1
-      call s:Window({'tags': {}}, [])
+      call s:Window({'tags': {}}, [], 0)
       winc p
     endif
   endif
-
-  call s:ShowCurrentTag()
 endfunction " }}}
 
 function! s:FormatDefault(settings, tags) " {{{
@@ -910,7 +932,7 @@ function! s:GetFoldPath(lnum) " {{{
   return path
 endfunction " }}}
 
-function! s:JumpToTag() " {{{
+function! s:JumpToTag(close) " {{{
   let tag_info = s:GetTagInfo()
   if !len(tag_info) || tag_info.line == -1 || get(tag_info, 'pattern', '') == ''
     return
@@ -972,9 +994,13 @@ function! s:JumpToTag() " {{{
       call s:ShowCurrentTag()
     endif
   endif
+
+  if a:close
+    call taglisttoo#taglist#Taglist({'action': 0})
+  endif
 endfunction " }}}
 
-function! s:Window(settings, tags) " {{{
+function! s:Window(settings, tags, temp) " {{{
   let file_bufnr = bufnr('%')
   let folds = exists('b:taglisttoo_folds') ? b:taglisttoo_folds : []
 
@@ -1010,7 +1036,7 @@ function! s:Window(settings, tags) " {{{
       hi TagListVisibilityStatic    guifg=#cf9ebe
     endif
 
-    nnoremap <silent> <buffer> <cr> :call <SID>JumpToTag()<cr>
+    exec 'nnoremap <silent> <buffer> <cr> :call <SID>JumpToTag(' . a:temp . ')<cr>'
 
     " folding related mappings
     nnoremap <silent> <buffer> o  :call <SID>FoldToggle()<cr>

@@ -85,6 +85,13 @@ are recursive):
     zo, zO   Open a fold.
     zn, zR   Open all folds.
 
+If you prefer to not have the taglist always taking up space you can
+alternatively create a mapping to open the tag list where it will be closed as
+soon as you choose a tag to jump to (<cr>). Here is an example where I map
+|<leader>|t to do that:
+
+  nnoremap <leader>t :call taglisttoo#taglist#Taglist({'pick': 1})<cr>
+
 -----------------------------------------------------------------------------
 Configuration                                    *taglisttoo-configuration*
 
