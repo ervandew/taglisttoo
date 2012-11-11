@@ -1086,13 +1086,6 @@ function! s:Window(settings, tags) " {{{
   silent 1,1delete _
   setlocal nomodifiable
 
-  " restore any saved folds
-  for path in folds
-    call s:FoldPath(path)
-  endfor
-
-  call setpos('.', pos)
-
   " if the entire taglist can fit in the window, then reposition the content
   " just in case the previous contents result in the current contents being
   " scrolled up a bit.
@@ -1106,6 +1099,13 @@ function! s:Window(settings, tags) " {{{
 
   " must be after definition of buffer vars
   setlocal foldexpr=s:FoldLevel(v:lnum) foldtext=getline(v:foldstart)
+
+  " restore any saved folds
+  for path in folds
+    call s:FoldPath(path)
+  endfor
+
+  call setpos('.', pos)
 endfunction " }}}
 
 function! s:ShowCurrentTag() " {{{
