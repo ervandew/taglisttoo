@@ -528,11 +528,6 @@ function! taglisttoo#taglist#Taglist(...) " {{{
 
   call s:Init()
 
-  if bufname('%') == s:taglisttoo_title
-    call s:CloseTaglist()
-    return
-  endif
-
   let options = len(a:000) ? a:000[0] : {}
   let action = get(options, 'action', -1)
 
@@ -540,6 +535,11 @@ function! taglisttoo#taglist#Taglist(...) " {{{
     let winnum = s:GetTagListWinnr()
     if winnum != -1
       let prevbuf = bufnr('%')
+      " handle closing from the taglist
+      if bufwinnr(prevbuf) == winnum
+        wincmd p
+        let prevbuf = bufnr('%')
+      endif
       exe winnum . 'wincmd w'
       call s:CloseTaglist()
       exec bufwinnr(prevbuf) . 'wincmd w'
