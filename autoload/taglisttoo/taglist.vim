@@ -315,7 +315,8 @@ let s:tlist_php_settings = {
       \ 'c': 'class',
       \ 'd': 'constant',
       \ 'v': 'variable',
-      \ 'f': 'function'
+      \ 'f': 'function',
+      \ 'i': 'interface'
     \ }
   \ }
 
