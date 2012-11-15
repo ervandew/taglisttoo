@@ -306,8 +306,10 @@ function! taglisttoo#util#SetNestedParents(types, tags, parent_types, parent_pai
         endif
         let parent_name .= parent.tag.name
       endfor
-      let parent_name = a:types[parents[-1].tag.type] . ':' . parent_name
-      let tag['parent'] = parent_name
+      if has_key(a:types, parents[-1].tag.type)
+        let parent_name = a:types[parents[-1].tag.type] . ':' . parent_name
+        let tag['parent'] = parent_name
+      endif
     endif
 
     " check if tag is a potential parent
