@@ -102,8 +102,21 @@ variables:
 - *g:Tlist_Ctags_Cmd* - Sets the location or your ctags executable (if not
   set, TaglistToo will try to find either exuberant-ctags or ctags on your
   path).
-- *g:Tlist_Auto_Open* (Default: 0) - When non-zero, the taglist will auto open
-  at vim startup if the file type is supported.
+- *g:Tlist_Auto_Open* (Default: 0) - Auto opens the taglist window based on
+  the supplied value:
+    g:Tlist_Auto_Open = 1 : At vim startup, or when opening a new tab, if the
+                            initial file type is supported, open the tag list.
+    g:Tlist_Auto_Open = 2 : Like 1, but auto open even after startup when the
+                            first taglist supported file type is edited.
+                            Example:
+                              $ vim
+                              :e something.py
+                            This behavior will only be triggered once per tab,
+                            so if you close the taglist it will not be auto
+                            opened any more for that tab.
+    g:Tlist_Auto_Open = 3 : Always open the taglist when a supported file type
+                            is opened regardless of whether you've manually
+                            closed the taglist at some point.
 - *g:Tlist_WinWidth* (Default: 30) - Sets the width of the taglist window.
 - *g:Tlist_Sort_Type* (Default: 'name') - Determines how the tags should be
   sorted in the taglist window. When set to 'name', the tags will be sorted

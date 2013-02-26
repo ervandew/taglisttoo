@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2012, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2013, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -100,17 +100,33 @@ endif
 if g:Tlist_Auto_Open && !exists('g:Tlist_Temp_Disable')
   augroup taglisttoo_autoopen
     autocmd!
-    autocmd VimEnter * nested call taglisttoo#taglist#AutoOpen()
+    autocmd VimEnter * nested
+      \ let s:started = 1 |
+      \ call taglisttoo#taglist#AutoOpen()
   augroup END
 
-  " Auto open on new tabs as well.
-  if v:version >= 700
+  if g:Tlist_Auto_Open == 1
+    " Auto open on new tabs as well.
+    if v:version >= 700
+      autocmd taglisttoo_autoopen BufWinEnter *
+        \ if tabpagenr() > 1 &&
+        \     !exists('t:Tlist_Auto_Opened') &&
+        \     !exists('g:SessionLoad') |
+        \   call taglisttoo#taglist#AutoOpen() |
+        \   let t:Tlist_Auto_Opened = 1 |
+        \ endif
+    endif
+
+  elseif g:Tlist_Auto_Open == 2
     autocmd taglisttoo_autoopen BufWinEnter *
-      \ if tabpagenr() > 1 &&
-      \     !exists('t:Tlist_Auto_Opened') &&
-      \     !exists('g:SessionLoad') |
+      \ if exists('s:started') && !exists('t:Tlist_Auto_Opened') |
       \   call taglisttoo#taglist#AutoOpen() |
-      \   let t:Tlist_Auto_Opened = 1 |
+      \ endif
+
+  elseif g:Tlist_Auto_Open == 3
+    autocmd taglisttoo_autoopen BufWinEnter *
+      \ if exists('s:started') |
+      \   call taglisttoo#taglist#AutoOpen() |
       \ endif
   endif
 endif

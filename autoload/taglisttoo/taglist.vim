@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2012, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2013, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -491,6 +491,11 @@ let s:tlist_yacc_settings = {'lang': 'yacc', 'tags': {'l': 'label'}}
 " }}}
 
 function! taglisttoo#taglist#AutoOpen() " {{{
+  let winnum = s:GetTagListWinnr()
+  if winnum != -1
+    return
+  endif
+
   let open_window = 0
 
   let i = 1
@@ -508,6 +513,7 @@ function! taglisttoo#taglist#AutoOpen() " {{{
 
   if open_window
     call taglisttoo#taglist#Taglist()
+    let t:Tlist_Auto_Opened = 1
   endif
 endfunction " }}}
 
@@ -1008,7 +1014,7 @@ function! s:Window(settings, tags, temp) " {{{
   let winnum = s:GetTagListWinnr()
   if winnum == -1
     let position = g:TaglistTooPosition == 'right' ? 'botright' : 'topleft'
-    exec position . ' vertical ' . g:Tlist_WinWidth .
+    silent exec position . ' vertical ' . g:Tlist_WinWidth .
       \ ' split ' . escape(s:taglisttoo_title, ' ')
 
     let winnum = s:GetTagListWinnr()
