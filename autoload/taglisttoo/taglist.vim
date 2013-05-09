@@ -546,10 +546,23 @@ function! taglisttoo#taglist#Taglist(...) " {{{
       if bufwinnr(prevbuf) == winnum
         wincmd p
         let prevbuf = bufnr('%')
+      else
+        let s:taglisttoo_prevwinnr = winnr()
       endif
-      exe winnum . 'wincmd w'
-      call s:CloseTaglist()
-      exec bufwinnr(prevbuf) . 'wincmd w'
+
+      " if closing the taglist window will affect the numbering of our stored
+      " previous window number, then adjust it accordingly
+      if s:taglisttoo_prevwinnr &&
+       \ winbufnr(s:taglisttoo_prevwinnr) == prevbuf &&
+       \ s:taglisttoo_prevwinnr > winnum
+        let s:taglisttoo_prevwinnr -= 1
+      endif
+
+      noautocmd exe winnum . 'wincmd w'
+      noautocmd close
+      call s:Cleanup()
+      call s:JumpToFileWindow(prevbuf)
+
       return
     endif
   endif
@@ -631,11 +644,6 @@ function! s:StartAutocmds() " {{{
   augroup END
 endfunction " }}}
 
-function! s:CloseTaglist() " {{{
-  close
-  call s:Cleanup()
-endfunction " }}}
-
 function! s:Cleanup() " {{{
   let bufnr = s:GetTagListBufnr()
   if bufnr != -1
@@ -684,7 +692,8 @@ function! s:ProcessTags(...) " {{{
   if filename == '' || &buftype != ''
     return
   endif
-  let filewin = winnr()
+
+  let filebuf = bufnr('%')
 
   if s:FileSupported(expand('%:p'), &ft)
     if exists('g:tlist_{&ft}_settings')
@@ -740,17 +749,7 @@ function! s:ProcessTags(...) " {{{
 
     let temp = get(options, 'pick', 0)
     call s:Window(settings, tags, temp)
-
-    " if the file buffer is no longer in the same window it was, then find its
-    " new location. Occurs when taglist first opens.
-    if winbufnr(filewin) != bufnr(filename)
-      let filewin = bufwinnr(filename)
-    endif
-
-    if filewin != -1
-      exec filewin . 'winc w'
-    endif
-
+    call s:JumpToFileWindow(filebuf)
     call s:ShowCurrentTag()
 
     " after showing the current tag jump back to the tag list if we're
@@ -945,13 +944,7 @@ function! s:JumpToTag(close) " {{{
     return
   endif
 
-  " handle case of buffer open in multiple windows.
-  if s:taglisttoo_prevwinnr &&
-   \ winbufnr(s:taglisttoo_prevwinnr) == b:taglisttoo_file_bufnr
-    noautocmd exec s:taglisttoo_prevwinnr . 'winc w'
-  else
-    noautocmd exec bufwinnr(b:taglisttoo_file_bufnr) . 'winc w'
-  endif
+  call s:JumpToFileWindow(b:taglisttoo_file_bufnr)
 
   let lnum = tag_info.line
   let pattern = tag_info.pattern
@@ -1004,6 +997,15 @@ function! s:JumpToTag(close) " {{{
 
   if a:close
     call taglisttoo#taglist#Taglist({'action': 0})
+  endif
+endfunction " }}}
+
+function! s:JumpToFileWindow(bufnr) " {{{
+  " handle case of buffer open in multiple windows.
+  if s:taglisttoo_prevwinnr && winbufnr(s:taglisttoo_prevwinnr) == a:bufnr
+    exec s:taglisttoo_prevwinnr . 'wincmd w'
+  else
+    exec bufwinnr(a:bufnr) . 'wincmd w'
   endif
 endfunction " }}}
 
