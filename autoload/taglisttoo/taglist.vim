@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2013, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2014, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -1016,14 +1016,14 @@ function! s:Window(settings, tags, temp) " {{{
   let winnum = s:GetTagListWinnr()
   if winnum == -1
     let position = g:TaglistTooPosition == 'right' ? 'botright' : 'topleft'
-    silent exec position . ' vertical ' . g:Tlist_WinWidth .
+    silent exec 'keepalt ' . position . ' vertical ' . g:Tlist_WinWidth .
       \ ' split ' . escape(s:taglisttoo_title, ' ')
 
     let winnum = s:GetTagListWinnr()
     exe winnum . 'wincmd w'
 
     setlocal filetype=taglist
-    setlocal buftype=nofile bufhidden=delete
+    setlocal buftype=nofile bufhidden=wipe
     setlocal noswapfile nobuflisted
     setlocal expandtab shiftwidth=2 tabstop=2
     setlocal winfixwidth
