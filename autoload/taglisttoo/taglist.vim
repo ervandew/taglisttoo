@@ -1009,14 +1009,20 @@ function! s:JumpToFileWindow(bufnr) " {{{
   endif
 endfunction " }}}
 
-function! s:Window(settings, tags, temp) " {{{
+function! s:Window(settings, tags, temp) abort " {{{
   let file_bufnr = bufnr('%')
   let folds = exists('b:taglisttoo_folds') ? b:taglisttoo_folds : []
 
   let winnum = s:GetTagListWinnr()
   if winnum == -1
     let position = g:TaglistTooPosition == 'right' ? 'botright' : 'topleft'
-    silent exec 'keepalt ' . position . ' vertical ' . g:Tlist_WinWidth .
+
+    " suppress autocmds while opening to avoid issue with minibufexpl on
+    " Windows.
+    silent exec
+      \ 'keepalt ' . position .
+      \ ' noautocmd' .
+      \ ' vertical ' . g:Tlist_WinWidth .
       \ ' split ' . escape(s:taglisttoo_title, ' ')
 
     let winnum = s:GetTagListWinnr()
