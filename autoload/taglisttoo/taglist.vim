@@ -1020,8 +1020,7 @@ function! s:Window(settings, tags, temp) abort " {{{
     " suppress autocmds while opening to avoid issue with minibufexpl on
     " Windows.
     silent exec
-      \ 'keepalt ' . position .
-      \ ' noautocmd' .
+      \ 'keepalt noautocmd ' . position .
       \ ' vertical ' . g:Tlist_WinWidth .
       \ ' split ' . escape(s:taglisttoo_title, ' ')
 
