@@ -376,7 +376,11 @@ let s:tlist_scheme_settings = {
   \ }
 
 " shell language
-let s:tlist_sh_settings = {'lang': 'sh', 'tags': {'f': 'function'}}
+let s:tlist_sh_settings = {
+    \ 'lang': 'sh',
+    \ 'parse': 'taglisttoo#lang#sh#Parse',
+    \ 'tags': {'f': 'function'}
+  \ }
 
 " C shell language
 let s:tlist_csh_settings = {'lang': 'sh', 'tags': {'f': 'function'}}
