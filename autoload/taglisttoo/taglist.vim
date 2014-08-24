@@ -1039,6 +1039,12 @@ function! s:Window(settings, tags, temp) abort " {{{
     setlocal nowrap nonumber
     setlocal foldmethod=expr foldlevel=99
 
+    " fire suppressed buffer autocmds for any plugins (eclim for instance)
+    " listening for those.
+    doautocmd WinEnter %
+    doautocmd BufWinEnter %
+    doautocmd BufEnter %
+
     syn match TagListFileName "^.*\%1l.*"
     hi link TagListFileName Identifier
     hi link TagListKeyword Statement
