@@ -1,5 +1,5 @@
 """
-Copyright (c) 2005 - 2012, Eric Van Dewoestine
+Copyright (c) 2005 - 2020, Eric Van Dewoestine
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms, with
@@ -67,7 +67,7 @@ def ctags(lang, types, filename):
       filename,
     ]
     if debug:
-      print ' '.join(args)
+      print(' '.join(args))
     process = subprocess.Popen(
       args,
       stdout=stdoutfile,
@@ -79,10 +79,10 @@ def ctags(lang, types, filename):
     retcode = process.wait()
     if retcode != 0:
       stderrfile.seek(0)
-      return (retcode, stderrfile.read())
+      return (retcode, stderrfile.read().decode('utf8'))
 
     stdoutfile.seek(0)
-    return (retcode, stdoutfile.read())
+    return (retcode, stdoutfile.read().decode('utf8'))
 
   finally:
     stdoutfile.close()
@@ -104,7 +104,7 @@ def jsctags(filename):
   try:
     args = [jsctags, '-o', temp, filename]
     if debug:
-      print ' '.join(args)
+      print(' '.join(args))
     process = subprocess.Popen(
       args,
       stdout=subprocess.PIPE,
@@ -136,7 +136,7 @@ def parse(filename, settings, patterns):
     try:
       info[1] = re.compile(info[1], flags)
     except:
-      print 'Failed to parse pattern: %s' % info[1]
+      print('Failed to parse pattern: %s' % info[1])
       raise
 
   offsets = FileOffsets.compile(filename)
@@ -200,7 +200,7 @@ class FileOffsets(object):
     return offsets;
 
   def compileOffsets(self, filename):
-    f = file(filename, 'r')
+    f = open(filename, 'r')
     try:
       self.offsets.append(0);
 
@@ -218,7 +218,7 @@ class FileOffsets(object):
     bot = -1
     top = len(self.offsets) - 1
     while (top - bot) > 1:
-      mid = (top + bot) / 2
+      mid = int((top + bot) / 2)
       if self.offsets[mid] < offset:
         bot = mid
       else:

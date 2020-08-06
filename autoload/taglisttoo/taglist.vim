@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2014, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2020, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -598,7 +598,7 @@ function! taglisttoo#taglist#Restore() " {{{
 endfunction " }}}
 
 function! s:Init() " {{{
-python << PYTHONEOF
+python3 << PYTHONEOF
 import sys, vim
 path = vim.eval('s:python_path')
 if path not in sys.path:

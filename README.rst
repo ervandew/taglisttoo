@@ -1,4 +1,4 @@
-.. Copyright (c) 2005 - 2010, Eric Van Dewoestine
+.. Copyright (c) 2005 - 2020, Eric Van Dewoestine
    All rights reserved.
 
    Redistribution and use of this software in source and binary forms, with
@@ -41,7 +41,7 @@ Lakshmanan, but with a focus on being extensible and customizable. TaglistToo
 provides hooks allowing you to format the taglist content per file type and to
 also write code to parse file types not supported well or at all by ctags.
 
-Please note that TaglistToo requires that vim be compiled with python support
+Please note that TaglistToo requires that vim be compiled with python3 support
 and that you have `exuberant ctags`_ installed.
 
 Please see the vim help file for full documentation.

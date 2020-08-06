@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2013, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2020, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -37,7 +37,7 @@
 
 if exists('g:taglisttoo_loaded') ||
    \ (exists('g:TaglistTooEnabled') && !g:TaglistTooEnabled) ||
-   \ !has('python')
+   \ !has('python3')
   finish
 endif
 let g:taglisttoo_loaded = 1

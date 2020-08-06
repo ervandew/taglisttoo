@@ -17,7 +17,7 @@ TaglistToo requires the following:
 
 1. Exuberant Ctags to be installed: http://ctags.sourceforge.net/
 2. Vim 7.x
-3. Python support compiled into (g)vim
+3. Python3 support compiled into (g)vim
 
 -----------------------------------------------------------------------------
 Overview                                         *taglisttoo-overview*

@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2012, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2020, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -193,7 +193,7 @@ function! taglisttoo#util#GetVisibility(tag) " {{{
 endfunction " }}}
 
 function! taglisttoo#util#Parse(file, settings, patterns) " {{{
-python << PYTHONEOF
+python3 << PYTHONEOF
 filename = vim.eval('a:file')
 patterns = vim.eval('a:patterns')
 settings = vim.eval('a:settings')
@@ -223,7 +223,7 @@ PYTHONEOF
 endfunction " }}}
 
 function! taglisttoo#util#ParseCtags(filename, settings) " {{{
-python << PYTHONEOF
+python3 << PYTHONEOF
 try:
   settings = vim.eval('a:settings')
   filename = vim.eval('a:filename')
