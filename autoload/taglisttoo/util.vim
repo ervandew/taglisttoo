@@ -240,6 +240,7 @@ PYTHONEOF
 
   if retcode
     if retcode != -1
+      call taglisttoo#util#EchoError(result)
       call taglisttoo#util#EchoError('taglist failed with error code: ' . retcode)
     endif
     return []
