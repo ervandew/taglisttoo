@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2020, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2022, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -325,7 +325,7 @@ let s:tlist_python_settings = {
     \ 'lang': 'python',
     \ 'tags': {
       \ 'c': 'class',
-      \ 'm': 'function',
+      \ 'm': 'member',
       \ 'f': 'function'
     \ }
   \ }
