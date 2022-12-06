@@ -58,7 +58,6 @@ def ctags(lang, types, filename):
       '-f', '-',
       '--format=2',
       '--excmd=pattern',
-      '--extra=',
       '--fields=kns',
       '--fields=-afiKlmSzt',
       '--sort=no',
