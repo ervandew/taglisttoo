@@ -1,7 +1,7 @@
 " Author:  Eric Van Dewoestine
 "
 " License: {{{
-"   Copyright (c) 2005 - 2022, Eric Van Dewoestine
+"   Copyright (c) 2005 - 2024, Eric Van Dewoestine
 "   All rights reserved.
 "
 "   Redistribution and use of this software in source and binary forms, with
@@ -1039,8 +1039,7 @@ function! s:Window(settings, tags, temp) abort " {{{
     setlocal nowrap nonumber
     setlocal foldmethod=expr foldlevel=99
 
-    " fire suppressed buffer autocmds for any plugins (eclim for instance)
-    " listening for those.
+    " fire suppressed buffer autocmds for any plugins listening for those.
     doautocmd WinEnter %
     doautocmd BufWinEnter %
     doautocmd BufEnter %
