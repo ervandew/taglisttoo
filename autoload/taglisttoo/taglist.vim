@@ -694,6 +694,12 @@ function! s:ProcessTags(...) " {{{
 
   let filename = expand('%:p')
   if filename == '' || &buftype != ''
+    " empty buffer, so just clear the current contents if the window is open
+    let winnum = s:GetTagListWinnr()
+    if winnum != -1
+      call s:Window({'tags': {}}, [], 0)
+      winc p
+    endif
     return
   endif
 
