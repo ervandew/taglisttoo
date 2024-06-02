@@ -35,11 +35,22 @@
 "   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 " }}}
 
-if exists('g:taglisttoo_loaded') ||
-   \ (exists('g:TaglistTooEnabled') && !g:TaglistTooEnabled) ||
-   \ !has('python3')
+if exists('g:taglisttoo_loaded')
   finish
 endif
+
+if (exists('g:TaglistTooEnabled') && !g:TaglistTooEnabled)
+  finish
+endif
+
+" neovim (python support only requires that python is available)
+if has('nvim') && !executable('python3')
+  finish
+" vim (python support must be compiled in)
+elseif !has('nvim') && !has('python3')
+  finish
+endif
+
 let g:taglisttoo_loaded = 1
 
 " try to disable taglist.vim
