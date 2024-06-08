@@ -282,7 +282,11 @@ let s:tlist_log4j_settings = {
   \ }
 
 " lua language
-let s:tlist_lua_settings = {'lang': 'lua', 'tags': {'f': 'function'}}
+let s:tlist_lua_settings = {
+    \ 'lang': 'lua',
+    \ 'parse': 'taglisttoo#lang#lua#Parse',
+    \ 'tags': {'f': 'function'}
+  \ }
 
 " makefiles
 let s:tlist_make_settings = {'lang': 'make', 'tags': {'m': 'macro'}}
