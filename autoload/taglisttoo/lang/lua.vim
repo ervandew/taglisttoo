@@ -39,6 +39,7 @@
 function! taglisttoo#lang#lua#Parse(file, settings)
   return taglisttoo#util#Parse(a:file, a:settings, [
       \ ['f', '(\w+)\s*=\s*function\(', 1],
+      \ ['f', 'function\s+(\w+)\(', 1],
     \ ])
 endfunction " }}}
 
