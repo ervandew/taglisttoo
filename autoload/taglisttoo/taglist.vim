@@ -1055,8 +1055,12 @@ function! s:Window(settings, tags, temp) abort " {{{
     doautocmd BufEnter %
 
     syn match TagListFileName "^.*\%1l.*"
-    hi link TagListFileName Identifier
-    hi link TagListKeyword Statement
+    if !hlexists('TagListFileName')
+      hi link TagListFileName Identifier
+    endif
+    if !hlexists('TagListKeyword')
+      hi link TagListKeyword Statement
+    endif
     hi TagListCurrentTag term=bold,underline cterm=bold,underline gui=bold,underline
     hi TagListVisibilityPublic    ctermfg=green   guifg=SeaGreen
     hi TagListVisibilityPrivate   ctermfg=red     guifg=Red
