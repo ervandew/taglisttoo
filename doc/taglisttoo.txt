@@ -76,6 +76,9 @@ the taglist window.
 Within the taglist window you can jump to a particular tag in the source file
 by hitting <Enter> on the tag.
 
+You can copy the tag under the cursor as a dot separated path starting at the
+outermost parent using Y (shift-y).
+
 Folding of tags by heading is also supported using a subset of vim's standard
 folding key bindings (Note: unlike the standard key bindings, none of these
 are recursive):

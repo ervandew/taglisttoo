@@ -820,11 +820,35 @@ function! s:EchoTag() " {{{
   if g:TaglistTooTagEcho
     let tag_info = s:GetTagInfo()
     if len(tag_info)
-      echo 'tag: ' . tag_info.name
+      echo 'tag:' tag_info.name
     else
       echo ''
     endif
   endif
+endfunction " }}}
+
+function! s:CopyPath() " {{{
+  let path = []
+  let start = line('.')
+  let indent = indent(start)
+
+  let lnum = start
+  while lnum >= 1
+    let line = getline(lnum)
+    let syntax = synIDattr(synID(lnum, 1, 1), 'name')
+    if syntax != 'TagListKeyword' && (lnum == start || indent(lnum) < indent)
+      call insert(path, substitute(line, '\(^\s*\|\s*$\|\s:\s.*$\)', '', 'g'))
+    endif
+    let indent = indent(lnum)
+    if indent == 0
+      break
+    endif
+    let lnum -= 1
+  endwhile
+
+  let dotpath = join(path, '.')
+  let @* = dotpath
+  echo 'copied:' dotpath
 endfunction " }}}
 
 function! s:FoldLevel(lnum) " {{{
@@ -1074,6 +1098,8 @@ function! s:Window(settings, tags, temp) abort " {{{
     endif
 
     exec 'nnoremap <silent> <buffer> <cr> :call <SID>JumpToTag(' . a:temp . ')<cr>'
+
+    nnoremap <silent> <buffer> Y  :call <SID>CopyPath()<cr>
 
     " folding related mappings
     nnoremap <silent> <buffer> o  :call <SID>FoldToggle()<cr>
