@@ -847,7 +847,12 @@ function! s:CopyPath() " {{{
   endwhile
 
   let dotpath = join(path, '.')
-  let @* = dotpath
+  if &clipboard =~ 'plus'
+    let @+ = dotpath
+  endif
+  if &clipboard =~ '\(unnamed\|autoselect\)\>'
+    let @* = dotpath
+  endif
   echo 'copied:' dotpath
 endfunction " }}}
 
