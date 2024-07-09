@@ -837,9 +837,9 @@ function! s:CopyPath() " {{{
     let line = getline(lnum)
     let syntax = synIDattr(synID(lnum, 1, 1), 'name')
     if syntax != 'TagListKeyword' && (lnum == start || indent(lnum) < indent)
+      let indent = indent(lnum)
       call insert(path, substitute(line, '\(^\s*\|\s*$\|\s:\s.*$\)', '', 'g'))
     endif
-    let indent = indent(lnum)
     if indent == 0
       break
     endif
