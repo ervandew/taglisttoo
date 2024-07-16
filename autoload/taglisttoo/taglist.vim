@@ -996,11 +996,7 @@ function! s:JumpToTag(close) " {{{
   let pattern = escape(pattern, '.~*[]')
   let pattern = substitute(pattern, '\s\+\$$', '\\s*$', '')
 
-  if getline(lnum) =~ pattern
-    mark '
-    call cursor(lnum, 1)
-    call s:ShowCurrentTag()
-  else
+  if getline(lnum) !~ pattern
     let pos = getpos('.')
 
     call cursor(lnum, 1)
@@ -1031,11 +1027,14 @@ function! s:JumpToTag(close) " {{{
     endif
 
     call setpos('.', pos)
-    if line
-      mark '
-      call cursor(line, 1)
-      call s:ShowCurrentTag()
-    endif
+    let lnum = line
+  endif
+
+  if lnum
+    mark '
+    call cursor(lnum, 1)
+    silent! normal! zOzz
+    call s:ShowCurrentTag()
   endif
 
   if a:close
