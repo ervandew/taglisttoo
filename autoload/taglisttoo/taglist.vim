@@ -1237,7 +1237,7 @@ function! s:ShowCurrentTag() " {{{
       exec 'syn match TagListCurrentTag "\S*\%' . index . 'l\S*"'
       if index != line('.')
         call cursor(index, 0)
-        call winline()
+        normal! zz
       endif
 
       exec 'noautocmd ' . cwinnum . 'winc w'
