@@ -622,7 +622,7 @@ function! s:StartAutocmds() " {{{
   augroup taglisttoo_file
     autocmd! * <buffer>
     autocmd! * *
-    autocmd CursorHold,CursorMoved <buffer> call s:EchoTag()
+    autocmd CursorHold,CursorMoved <buffer> call s:EchoTagPath()
     autocmd BufEnter <buffer> nested call s:CloseIfLastWindow()
     autocmd BufEnter *
       \ if s:GetTagListWinnr() != -1 |
@@ -816,18 +816,7 @@ function! s:GetTagInfo() " {{{
   return b:taglisttoo_tags[index]
 endfunction " }}}
 
-function! s:EchoTag() " {{{
-  if g:TaglistTooTagEcho
-    let tag_info = s:GetTagInfo()
-    if len(tag_info)
-      echo 'tag:' tag_info.name
-    else
-      echo ''
-    endif
-  endif
-endfunction " }}}
-
-function! s:CopyPath() " {{{
+function! s:GetTagPath() " {{{
   let path = []
   let start = line('.')
   let indent = indent(start)
@@ -845,8 +834,22 @@ function! s:CopyPath() " {{{
     endif
     let lnum -= 1
   endwhile
+  return join(path, '.')
+endfunction " }}}
 
-  let dotpath = join(path, '.')
+function! s:EchoTagPath() " {{{
+  if g:TaglistTooTagEcho
+    let dotpath = s:GetTagPath()
+    if len(dotpath)
+      echo 'tag:' dotpath
+    else
+      echo ''
+    endif
+  endif
+endfunction " }}}
+
+function! s:CopyTagPath() " {{{
+  let dotpath = s:GetTagPath()
   if &clipboard =~ 'plus'
     let @+ = dotpath
   endif
@@ -1103,7 +1106,7 @@ function! s:Window(settings, tags, temp) abort " {{{
 
     exec 'nnoremap <silent> <buffer> <cr> :call <SID>JumpToTag(' . a:temp . ')<cr>'
 
-    nnoremap <silent> <buffer> Y  :call <SID>CopyPath()<cr>
+    nnoremap <silent> <buffer> Y  :call <SID>CopyTagPath()<cr>
 
     " folding related mappings
     nnoremap <silent> <buffer> o  :call <SID>FoldToggle()<cr>
